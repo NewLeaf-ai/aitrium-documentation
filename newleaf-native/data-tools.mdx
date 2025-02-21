@@ -1,0 +1,33 @@
+---
+title: "Data Tools"
+description: "Using the Data Tools module in the NewLeaf Native Application"
+---
+
+## Data Tools Module
+
+The **Data Tools Module** provides local data processing functionality to ensure your medical images meet trial requirements before they’re uploaded. This includes anonymization, validation, and format standardization.
+
+### Anonymization
+
+Many clinical trials require patient-identifying information to be removed or masked:
+1. **Select** the folder or file you want to anonymize.
+2. **Configure** the anonymization fields (e.g., patient ID, patient name).
+3. **Run** the process. A summary report will detail what was removed or replaced.
+
+### Validation
+
+Each clinical trial can have its own schema or standard:
+1. **Choose** the trial you plan to contribute data to.
+2. **Select** the data to validate.
+3. **Run** validation, and review any errors or warnings. This will help ensure data is accepted by the trial’s repository.
+
+### Format Standardization
+
+Convert your data into the required format for the trial:
+- **DICOM** or other imaging formats
+- **Compression** or decompression if the trial requests a specific format
+- **Metadata** updates to comply with trial-specific fields
+
+<Warning>
+  Always validate data after anonymization to ensure the new files meet the trial’s requirements. 
+</Warning>
