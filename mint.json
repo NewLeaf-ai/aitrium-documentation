@@ -1,35 +1,35 @@
 {
   "$schema": "https://mintlify.com/schema.json",
-  "name": "NewLeaf Documentation",
+  "name": "Aitrium Documentation",
   "logo": {
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg"
   },
   "favicon": "/favicon.svg",
   "colors": {
-    "primary": "#0D9373",
-    "light": "#07C983",
-    "dark": "#0D9373",
+    "primary": "#0052CC",
+    "light": "#2684FF",
+    "dark": "#0052CC",
     "anchors": {
-      "from": "#0D9373",
-      "to": "#07C983"
+      "from": "#0052CC",
+      "to": "#2684FF"
     }
   },
   "topbarLinks": [
     {
       "name": "Support",
-      "url": "mailto:support@newleaf.ai"
+      "url": "mailto:support@aitriumos.com"
     }
   ],
   "topbarCtaButton": {
     "name": "Dashboard",
-    "url": "https://app.newleaf.ai"
+    "url": "https://app.aitriumos.com"
   },
   "anchors": [
     {
-      "name": "NewLeaf Portal",
-      "icon": "leaf",
-      "url": "https://app.newleaf.ai"
+      "name": "Aitrium Dashboard",
+      "icon": "chart-line",
+      "url": "https://app.aitriumos.com"
     }
   ],
   "navigation": [
@@ -40,14 +40,14 @@
       ]
     },
     {
-      "group": "NewLeaf Desktop",
+      "group": "AitriumOS",
       "pages": [
         "newleaf-native/overview"
       ]
     }
   ],
   "footerSocials": {
-    "x": "https://x.com/NewLeafAI",
-    "linkedin": "https://linkedin.com/company/newleaf-ai"
+    "x": "https://x.com/aitriumos",
+    "linkedin": "https://linkedin.com/company/aitriumos"
   }
 }
