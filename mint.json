@@ -5,6 +5,7 @@
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg"
   },
+  "theme": "prism",
   "favicon": "/favicon.svg",
   "colors": {
     "primary": "#0052CC",
