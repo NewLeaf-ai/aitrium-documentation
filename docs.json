@@ -1,0 +1,72 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Aitrium Documentation",
+  "colors": {
+    "primary": "#0052CC",
+    "light": "#2684FF",
+    "dark": "#0052CC"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "anchors": [
+      {
+        "anchor": "Documentation",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction"
+            ]
+          },
+          {
+            "group": "AitriumOS",
+            "pages": [
+              "aitrium-os/overview"
+            ]
+          }
+        ]
+      },
+      {
+        "anchor": "API Reference",
+        "icon": "square-terminal",
+        "openapi": {
+          "source": "openapi.yaml"
+        }
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Aitrium Dashboard",
+          "href": "https://app.aitriumos.com",
+          "icon": "chart-line"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:support@aitriumos.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://app.aitriumos.com"
+    }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/aitriumos",
+      "linkedin": "https://linkedin.com/company/aitriumos"
+    }
+  }
+}

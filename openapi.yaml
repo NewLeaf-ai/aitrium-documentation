@@ -1,0 +1,451 @@
+openapi: 3.0.0
+info:
+  title: External API
+  version: v1
+  description: |-
+    API for external developers to interact with Newleaf services.
+    All endpoints require Bearer token authentication.
+servers:
+  - url: https://newleaf-api-336813653216.us-central1.run.app/external/v1 # Assuming this is the base path for the routers in trials.py and structures.py
+    description: Main API server
+
+security:
+  - OAuth2: []
+
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      description: "OAuth 2.0 Client Credentials Grant. Requires client_id and client_secret to obtain a Bearer token."
+      flows:
+        clientCredentials:
+          tokenUrl: /external/v1/oauth/token
+          scopes: {}
+
+  schemas:
+    ProjectResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the project/trial.
+        name:
+          type: string
+          description: Name of the project/trial.
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the project/trial.
+        external_id:
+          type: string
+          nullable: true
+          description: Optional external identifier for the project/trial.
+        organization_id:
+          type: string
+          format: uuid
+          description: Identifier of the organization this project/trial belongs to.
+        created_by:
+          type: string
+          format: uuid
+          description: Identifier of the user who created the project/trial.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp of when the project/trial was created.
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of when the project/trial was last updated.
+        is_active:
+          type: boolean
+          description: Indicates if the project/trial is currently active.
+        is_archived:
+          type: boolean
+          description: Indicates if the project/trial is archived.
+        instructions:
+          type: string
+          nullable: true
+          description: Optional instructions for the project/trial.
+        start_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional start date of the project/trial.
+      required:
+        - id
+        - name
+        - organization_id
+        - created_by
+        - created_at
+        - is_active
+        - is_archived
+
+    ExternalStructureInput:
+      type: object
+      description: Input for a single structure to be standardized.
+      properties:
+        structure_name:
+          type: string
+          description: The original structure name/label to be standardized.
+        rt_plan_id:
+          type: string
+          description: Identifier for the associated RT Plan.
+        rt_structure_set_id:
+          type: string
+          description: Identifier for the associated RT Structure Set.
+        structure_type:
+          type: string
+          nullable: true
+          description: "Type of structure (e.g., VOLUME, ROI)."
+          example: "VOLUME"
+        dose_reference_type:
+          type: string
+          nullable: true
+          description: "Dose reference type (e.g., ORGAN_AT_RISK, TARGET)."
+          example: "ORGAN_AT_RISK"
+        target_prescription_dose:
+          type: number
+          format: float
+          nullable: true
+          description: "Prescription dose in Gy, if applicable."
+          example: 50.4
+        observation_type:
+          type: string
+          nullable: true
+          description: "Observation type (e.g., ORGAN, CTV, PTV, GTV)."
+          example: "PTV"
+        structure_volume:
+          type: number
+          format: float
+          nullable: true
+          description: "Volume of the structure in cm³."
+          example: 120.5
+        body_part_examined:
+          type: string
+          nullable: true
+          description: "Body part examined (e.g., HEAD_NECK, CHEST)."
+          example: "HEAD_NECK"
+      required:
+        - structure_name
+        - rt_plan_id
+        - rt_structure_set_id
+
+    ExternalStandardizeRequest:
+      type: object
+      description: Request body for standardizing multiple structure names.
+      properties:
+        structures:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalStructureInput'
+          description: List of structures to standardize.
+        language:
+          type: string
+          description: "The primary language of the original_name fields (e.g., 'en', 'fr')."
+          default: "en"
+          example: "en"
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: "Optional project ID for context-specific standardization rules."
+      required:
+        - structures
+
+    ExternalStandardizedLabel:
+      type: object
+      description: Details of a single standardized structure label.
+      properties:
+        original_name:
+          type: string
+          description: The original structure name provided in the request.
+        new_label:
+          type: string
+          description: The standardized label.
+        confidence:
+          type: number
+          format: float
+          description: Confidence score of the standardization.
+        rt_plan_id:
+          type: string
+          description: Identifier for the RT Plan, echoed from input.
+        rt_structure_set_id:
+          type: string
+          description: Identifier for the RT Structure Set, echoed from input.
+      required:
+        - original_name
+        - new_label
+        - confidence
+        - rt_plan_id
+        - rt_structure_set_id
+
+    ExternalStandardizeResponse:
+      type: object
+      description: Response body containing the list of standardized labels.
+      properties:
+        standardized_labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalStandardizedLabel'
+      required:
+        - standardized_labels
+
+    HTTPError:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: A human-readable error message.
+      required:
+        - detail
+
+paths:
+  /trials/:
+    get:
+      tags:
+        - "Trials"
+      summary: List Trials for Client's Organization
+      description: |-
+        Retrieve a list of trials associated with your organization.
+        Requires a valid Bearer token.
+      operationId: get_external_trials
+      parameters:
+        - name: active
+          in: query
+          description: Filter by active status.
+          required: false
+          schema:
+            type: boolean
+        - name: archived
+          in: query
+          description: "Filter by archived status. If not provided, defaults to False (unarchived trials are returned)."
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: A list of trials.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectResponse'
+        '401':
+          description: Unauthorized (Invalid or missing token).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '403':
+          description: Forbidden (Client not associated with an organization or other permission issue).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+      security:
+        - OAuth2: []
+
+  /trials/{trial_id}:
+    get:
+      tags:
+        - "Trials"
+      summary: Get Specific Trial for Client's Organization
+      description: |-
+        Retrieve details for a specific trial (project) if it belongs to the
+        authenticated external client's organization.
+        Requires a valid Bearer token.
+      operationId: get_external_trial
+      parameters:
+        - name: trial_id
+          in: path
+          required: true
+          description: The UUID of the trial to retrieve.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Details of the specified trial.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '401':
+          description: Unauthorized (Invalid or missing token).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '403':
+          description: Forbidden (Client not associated with an organization or trial not accessible).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '404':
+          description: Trial not found or not accessible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+      security:
+        - OAuth2: []
+
+  /structures/standardize:
+    post:
+      tags:
+        - "RT Structures"
+      summary: Standardize RT Structure Names
+      description: |-
+        Standardizes a list of Radiation Therapy structure names using the
+        RT Plan Standardizer microservice.
+        Requires a valid Bearer token. The client's associated organization
+        determines the structure nomenclature used.
+      operationId: standardize_external_structures
+      requestBody:
+        description: List of structures to standardize and context.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalStandardizeRequest'
+      responses:
+        '200':
+          description: Successfully standardized structures.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalStandardizeResponse'
+        '400':
+          description: Bad Request (e.g., invalid input data).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError' # Or potentially HTTPValidationError
+        '401':
+          description: Unauthorized (Invalid or missing token).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '403':
+          description: Forbidden (Client configuration error).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '404':
+          description: Not Found (e.g., No active nomenclature found).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '500':
+          description: Internal Server Error (e.g., error communicating with microservice).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '502':
+          description: Bad Gateway (Error response from standardization service).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '503':
+          description: Service Unavailable (Could not connect to standardization service).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '504':
+          description: Gateway Timeout (Standardization service timed out).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+      security:
+        - OAuth2: []
+
+  /structures/standard-labels/{nomenclature_id}:
+    get:
+      tags:
+        - "RT Structures"
+      summary: Get Standard Labels by Nomenclature ID
+      description: |-
+        Retrieves the list of standard labels for a given nomenclature ID.
+        Requires a valid Bearer token. Access might be restricted based on client's
+        organization or if the ID corresponds to the public template.
+      operationId: get_external_standard_labels
+      parameters:
+        - name: nomenclature_id
+          in: path
+          required: true
+          description: The UUID of the nomenclature to retrieve standard labels for.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of standard label strings.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["PTV_High", "PTV_Low", "Heart", "SpinalCord"]
+        '401':
+          description: Unauthorized (Invalid or missing token).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '403':
+          description: Forbidden (Client configuration error or access denied to nomenclature).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '404':
+          description: Not Found (e.g. Nomenclature ID does not exist or is not accessible).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '502':
+          description: Bad Gateway (Error response from standardization service).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+        '503':
+          description: Service Unavailable (Could not connect to standardization service).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+      security:
+        - OAuth2: [] 
