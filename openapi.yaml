@@ -206,7 +206,7 @@ paths:
     get:
       tags:
         - "Trials"
-      summary: List Trials for Client's Organization
+      summary: Get Trials
       description: |-
         Retrieve a list of trials associated with your organization.
         Requires a valid Bearer token.
@@ -259,10 +259,9 @@ paths:
     get:
       tags:
         - "Trials"
-      summary: Get Specific Trial for Client's Organization
+      summary: Get Trial Details
       description: |-
-        Retrieve details for a specific trial (project) if it belongs to the
-        authenticated external client's organization.
+        Retrieve details for a specific trial.
         Requires a valid Bearer token.
       operationId: get_external_trial
       parameters:
@@ -313,10 +312,8 @@ paths:
         - "RT Structures"
       summary: Standardize RT Structure Names
       description: |-
-        Standardizes a list of Radiation Therapy structure names using the
-        RT Plan Standardizer microservice.
-        Requires a valid Bearer token. The client's associated organization
-        determines the structure nomenclature used.
+        Standardizes a list of Radiation Therapy structure names using Aitrium's
+        RT Plan Standardizer.
       operationId: standardize_external_structures
       requestBody:
         description: List of structures to standardize and context.
@@ -387,7 +384,7 @@ paths:
     get:
       tags:
         - "RT Structures"
-      summary: Get Standard Labels by Nomenclature ID
+      summary: Get Nomenclature Standard Labels
       description: |-
         Retrieves the list of standard labels for a given nomenclature ID.
         Requires a valid Bearer token. Access might be restricted based on client's
