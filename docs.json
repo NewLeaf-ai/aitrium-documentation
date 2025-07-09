@@ -23,7 +23,8 @@
           {
             "group": "AitriumOS",
             "pages": [
-              "aitrium-os/overview"
+              "aitrium-os/overview",
+              "aitrium-os/trial-data-submissions"
             ]
           }
         ]

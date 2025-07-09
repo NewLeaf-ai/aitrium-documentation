@@ -1,0 +1,112 @@
+---
+title: "Trial Data Submissions"
+description: "Step-by-step guide for submitting patient data to clinical trials"
+---
+
+## Overview
+
+This guide walks you through the complete process of submitting patient data to clinical trials using AitriumOS. The submission process ensures your data meets all trial requirements while maintaining patient privacy through standardization and de-identification.
+
+## Video Walkthrough
+
+<div style={{ position: "relative", paddingBottom: "calc(54.85407980941036% + 41px)", height: 0, width: "100%" }}>
+  <iframe 
+    src="https://demo.arcade.software/bwn6hdByRkjUueOQduJJ?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true" 
+    title="Submit and Standardize a Patient Dataset for Clinical Trial Review" 
+    frameBorder="0" 
+    loading="lazy" 
+    allowFullScreen
+    allow="clipboard-write" 
+    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", colorScheme: "light" }}
+  />
+</div>
+
+## Submission Process
+
+The trial data submission workflow consists of five key steps:
+
+### 1. Trial Dataset Validation
+
+The first step validates your patient data against the trial's specific requirements:
+- Verifies presence of required patient data files
+- Identifies missing or invalid data elements
+- Validates DICOM headers against trial-specific requirements
+- Provides detailed feedback on any validation issues
+
+### 2. Structure Standardization
+
+For trials requiring RT structures, this step ensures consistency:
+- Processes RTSTRUCT files to standardize organ and target labels
+- Maps local naming conventions to trial-standard nomenclature
+- Ensures adherence to trial-specific structure requirements
+- Generates standardization reports for review
+
+### 3. DICOM Metadata Validation & De-identification
+
+This critical step protects patient privacy:
+- Analyzes all DICOM headers for potentially identifying information.
+- Applies trial-specific de-identification policies to the DICOM file metadata.
+
+### 4. Final Review
+
+Before submission, review all processed data:
+- Verify standardized structure names
+- Confirm de-identification completeness
+- Review validation results
+- Approve data for submission
+
+### 5. Upload to Trial
+
+The final step sends your prepared data to the trial organization:
+- Securely compresses (e.g. ZIP file creation), names, and transfers the anonymized patient dataset.
+- Provides upload progress tracking
+- Confirms successful submission
+
+## Monitoring Submission Status
+
+After submission, you can track the status of each patient dataset:
+
+1. Navigate to the trial homepage in AitriumOS
+2. View dataset completion status for each Trial Patient ID.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Prepare Your Data">
+    - Ensure that any supplementary non-DICOM files you intend to send do not have personally-identifiable information.
+    - Ensure that the DICOM images you intend to send do not have burned-in pixels with personally-identifiable information.
+    - Ensure all required DICOM series are present
+  </Accordion>
+  
+  <Accordion title="Review Validation Results">
+    - Ensure you review the Dataset completness validation and address required data errors before proceeding.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting Common Issues
+
+### Validation Failures
+If dataset validation fails:
+- Check the Analysis Result's Data Errors tab.  The DICOM data provided may be corrupted.
+- Check that all required DICOM series are present in the folder you've selected.
+
+### Structure Standardization Issues
+For RT structure problems:
+- Confirm RTSTRUCT files are properly linked to image series
+- Check that structure names can be mapped to trial standards
+- Review the standardization mapping table
+
+### Upload Errors
+If uploads fail:
+- Verify your internet connection stability
+- Check available disk space
+- Ensure you have proper trial permissions
+- Contact support if issues persist
+
+## Need Help?
+
+If you encounter any issues during the submission process:
+- Review the error messages carefully
+- Consult the trial-specific requirements documentation
+- Contact support at [support@aitriumos.com](mailto:support@aitriumos.com)
+- Include your trial ID and patient ID when reporting issues
