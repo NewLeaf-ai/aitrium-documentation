@@ -26,6 +26,12 @@
               "aitrium-os/overview",
               "aitrium-os/trial-data-submissions"
             ]
+          },
+          {
+            "group": "Atlas",
+            "pages": [
+              "aitrium-os/atlas-open-access"
+            ]
           }
         ]
       },

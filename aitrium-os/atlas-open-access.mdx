@@ -1,0 +1,115 @@
+---
+title: "Atlas Open Access"
+description: "Get started with Atlas for radiation therapy analysis and quality assurance"
+---
+
+## Overview
+
+Atlas is Aitrium's powerful analysis platform that enables you to run comprehensive radiation therapy quality assurance directly from your desktop. With Open Access, you can analyze patient data, create scorecards, and generate reports using your own analysis projects.
+
+## Quick Start Guide
+
+Getting started with Atlas involves three main steps: downloading the desktop application, configuring your analysis project, and running your first analysis.
+
+### Step 1: Download AitriumOS Desktop
+
+Before you begin, you'll need to download and install the AitriumOS desktop application. 
+
+<Card title="Install AitriumOS" icon="download" href="/aitrium-os/overview#installing-aitriumos">
+  Follow our installation guide to download and set up the AitriumOS desktop application on your Mac or Windows computer.
+</Card>
+
+### Step 2: Configure Your Analysis Project
+
+Create and activate your analysis project to define the structures and constraints for your QA workflow.
+
+<AccordionGroup>
+  <Accordion title="Project Setup">
+    1. **Access Analysis Projects**: 
+       - Log into [https://app.aitriumos.com](https://app.aitriumos.com)
+       - Click "Analysis Projects" in the navigation sidebar
+       - Open the "Demo Analysis" project or create a new one
+    
+    2. **Create a Scorecard**:
+       - Set your **Prescription Dose** (Max or Target Dose)
+       - Click **"Add Structures"** to build your structure set:
+         - Select OAR structures from the list
+         - Click **"Create New Target"** for PTV/CTV/GTV structures
+         - The target name you provide becomes the standardized structure label
+       - Add constraints to each structure
+       - Click **"Create Scorecard"** when all structures have constraints
+    
+    3. **Activate the Project**: 
+       - Click the **"Inactive"** button in the top-right corner
+       - Toggle it to **"Active"** to make it available in the desktop application
+  </Accordion>
+</AccordionGroup>
+
+### Step 3: Run Your Analysis
+
+Execute your analysis directly from the AitriumOS desktop application.
+
+<AccordionGroup>
+  <Accordion title="Running Analysis">
+    1. **Open AitriumOS Desktop**: Launch the application and ensure you're logged in
+    
+    2. **Navigate to Trials**: Click the first item in the sidebar navigation for the "Trials" page
+    
+    3. **Select Your Project**: Choose "Demo Analysis" or your custom project
+    
+    4. **Start New Analysis**: 
+       - Click **"New Analysis"**
+       - Select the folder containing your patient DICOM data
+       - The analysis will begin automatically
+    
+    5. **Processing**: Monitor the progress as Atlas processes your data against the defined scorecard
+  </Accordion>
+</AccordionGroup>
+
+### Step 4: View Results
+
+Once your analysis is complete, review the comprehensive results in the Aitrium dashboard.
+
+<AccordionGroup>
+  <Accordion title="Accessing Results">
+    - Return to [https://app.aitriumos.com](https://app.aitriumos.com)
+    - Navigate to the "Analysis Projects" page
+    - Your analysis results will be available with detailed metrics and visualizations
+    - Export reports in various formats as needed
+  </Accordion>
+</AccordionGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Automated QA" icon="robot">
+    Streamline quality assurance with automated structure standardization and constraint evaluation
+  </Card>
+  <Card title="Custom Scorecards" icon="clipboard-check">
+    Define your own structures and constraints tailored to your specific protocols
+  </Card>
+  <Card title="Desktop Integration" icon="desktop">
+    Seamlessly analyze local DICOM data without uploading to the cloud
+  </Card>
+  <Card title="Comprehensive Reports" icon="chart-line">
+    Generate detailed analysis reports with metrics, visualizations, and pass/fail criteria
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Project not visible in desktop app">
+    Ensure your project is set to "Active" in the web dashboard. Only active projects appear in the desktop application.
+  </Accordion>
+  <Accordion title="Analysis fails to start">
+    Verify that your selected folder contains valid DICOM files including RT Structure Sets and RT Dose files.
+  </Accordion>
+  <Accordion title="Cannot log into desktop app">
+    Confirm you're using the same credentials as the web dashboard and that you have an active internet connection.
+  </Accordion>
+</AccordionGroup>
+
+## Support
+
+Need assistance? Contact our support team at [support@aitriumos.com](mailto:support@aitriumos.com) for help with Atlas Open Access.
