@@ -1,0 +1,300 @@
+---
+title: "Integration Management"
+description: "Manage data transfer integrations, credentials, and site user permissions"
+---
+
+## Overview
+
+The Integrations page allows organization administrators to manage data transfer integrations, credentials, and user permissions. This guide will help you understand how to configure and manage integrations for your organization.
+
+---
+
+## Accessing Your Integrations
+
+1. Navigate to **Dashboard** > **Integrations** from the main menu
+2. You'll see a list of all integrations configured for your organization
+3. Each integration card displays:
+   - Integration name
+   - Credential type (Cloud Credentials or Local Config)
+   - Number of sites using the integration
+4. Click on any integration card to manage its settings
+
+<img src="/images/integrations/integrations_page.png" alt="Integrations page showing list of configured integrations" style={{borderRadius: '8px'}} />
+
+### What if I don't see any integrations?
+
+If no integrations appear, your organization hasn't been set up with any data transfer integrations yet. Contact support at [contact@aitriumos.com](mailto:contact@aitriumos.com) to request integration setup.
+
+---
+
+## Credential Groups
+
+Credential Groups allow you to manage different sets of credentials and user permissions within the same integration. This is useful when:
+
+- Different sites require different credentials
+- Different teams need access to different systems
+- You want to segregate access for security or organizational reasons
+
+<img src="/images/integrations/integration_details_page_credential_groups.png" alt="Integration details page showing credential groups" style={{borderRadius: '8px'}} />
+
+### Key Features
+
+- **Multiple Groups**: Create multiple credential groups per integration
+- **Site Assignment**: Assign specific sites to each credential group
+- **User Permissions**: Control which users have access to each group
+- **Independent Credentials**: Each group can have different credential values
+
+### Creating a Credential Group
+
+1. Open an integration from the main Integrations page
+2. Navigate to the **Credential Groups** tab
+3. Click **Create New Group** in the left sidebar
+4. Provide:
+   - **Group Name**: A descriptive name for the credential group
+   - **Site Selection**: Choose which sites will use these credentials
+5. Click **Create** to save the new group
+
+<img src="/images/integrations/new_credential_group.png" alt="Create new credential group dialog" style={{borderRadius: '8px'}} />
+
+### Editing a Credential Group
+
+1. Select the credential group from the left sidebar
+2. Click the **Edit** button (pencil icon)
+3. Update the group name or site assignments
+4. Click **Save** to apply changes
+
+### Deleting a Credential Group
+
+1. Select the credential group to delete
+2. Click the **Delete** button (trash icon)
+3. Confirm the deletion in the dialog
+
+**Note**: You must have at least one credential group per integration. The last group cannot be deleted.
+
+---
+
+## Managing Credentials
+
+### Viewing Current Credentials
+
+1. Open an integration and navigate to **Credential Groups**
+2. Select a credential group from the left sidebar
+3. The credential form will display all available fields
+4. Secret fields (passwords) are masked for security
+
+### Updating Credentials
+
+1. Select a credential group
+2. Modify the credential fields as needed:
+   - **Text fields**: Enter alphanumeric values
+   - **Number fields**: Enter numeric values only
+   - **Boolean fields**: Toggle switches on/off
+   - **Secret fields**: Enter passwords (will be masked)
+3. Click **Update Credentials** to save changes
+4. Click **Reset** to discard unsaved changes
+
+### Publishing Credentials
+
+When you update credentials:
+- Changes are automatically published to all users in the credential group
+- Users across all assigned sites receive the updated credentials
+- The system tracks all credential updates in the activity log
+
+**Important**: Credential updates affect all users with access to the credential group. Ensure credentials are correct before publishing.
+
+---
+
+## Managing User Access
+
+### Understanding User Permissions
+
+Users must be granted explicit permission to access integration credentials. Permissions are managed at the credential group level, allowing fine-grained access control.
+
+### Viewing Current Users
+
+1. Select a credential group
+2. Navigate to the **Users** tab
+3. View the list of users with access to this credential group
+4. Use filters to:
+   - Search by name or email
+   - Filter by site
+
+<img src="/images/integrations/integration_details_page_users.png" alt="Integration users tab showing current users with access" style={{borderRadius: '8px'}} />
+
+### Adding Users
+
+1. Navigate to the **Users** tab within a credential group
+2. Click **Add Users**
+3. Select the site that you wish to permission users from.
+4. Select users from the list:
+   - Use the search bar to find specific users
+   - Filter by site or organization
+   - Select multiple users at once
+5. Click **Add Users**
+6. The system automatically:
+   - Grants access to the credential group
+   - Publishes credentials to the new users
+   - Records the action in the activity log
+
+<img src="/images/integrations/add_user_integration.png" alt="Add users dialog for permissioning users to an integration" style={{borderRadius: '8px'}} />
+
+**Note**: Only active users in your Aitrium Network are available for selection. Users who already have access are not shown in the list.
+
+### Removing User Access
+
+1. Navigate to the **Users** tab
+2. Find the user you want to remove
+3. Click the **Remove** button next to their name
+4. Confirm the removal in the dialog
+5. The user immediately loses access to the integration credentials
+
+**Warning**: Removing access cannot be undone. The user will need to be re-added if you change your mind.
+
+---
+
+## Integration Logs
+
+The Integration Logs tab provides technical execution logs showing when the integration has run and whether it succeeded or failed. This is useful for debugging integration issues.
+
+### Viewing Integration Logs
+
+1. Open an integration
+2. Navigate to the **Logs** tab
+3. View chronological list of integration executions
+
+<img src="/images/integrations/integration_logs.png" alt="Integration logs showing execution history and status" style={{borderRadius: '8px'}} />
+
+### Information Tracked
+
+- **Execution Status**: Success or failure of each integration run
+- **Timestamps**: When each execution occurred
+- **Error Messages**: Technical details when executions fail
+- **Execution Details**: Information about what was processed
+
+### Using Integration Logs for Troubleshooting
+
+- Identify when an integration last ran successfully
+- Diagnose technical failures or connection issues
+- Monitor integration performance and reliability
+- Debug data transfer problems
+
+---
+
+## Audit Logs
+
+Configuration changes to integrations (credential updates, user access changes, credential group modifications) are tracked in the **Audit Logs** page, which is separate from the integration-specific logs.
+
+### Accessing Audit Logs
+
+Navigate to the **Audit Logs** page from the main dashboard to view:
+- Credential updates and who made them
+- User access changes (additions and removals)
+- Credential group creation, updates, and deletion
+- Affected resources (sites and users impacted by each change)
+- Timestamps for all configuration changes
+
+This provides a complete audit trail for compliance and security purposes.
+
+---
+
+## Common Tasks
+
+### Scenario 1: Onboarding a New Team Member
+
+1. Navigate to **Integrations** > Select the integration
+2. Select the appropriate **Credential Group**
+3. Go to the **Users** tab
+4. Click **Permission New Users**
+5. Find and select the new team member
+6. Click **Add Selected Users**
+
+### Scenario 2: Rotating Integration Credentials
+
+1. Navigate to **Integrations** > Select the integration
+2. Select the **Credential Group** to update
+3. Update the credential fields with new values
+4. Click **Update Credentials**
+5. Verify the update in the **Audit Logs** page
+
+### Scenario 3: Setting Up Integration for a New Site
+
+1. Navigate to **Integrations** > Select the integration
+2. Create a **New Credential Group** or edit an existing one
+3. Add the new site to the credential group
+4. Enter or update credentials for the site
+5. Add users from the new site who need access
+6. Click **Update Credentials** to publish
+
+### Scenario 4: Segregating Access by Department
+
+1. Create separate **Credential Groups** for each department
+2. Assign relevant sites to each group
+3. Configure credentials specific to each group (if different)
+4. Add users from each department to their respective group
+
+---
+
+## Troubleshooting
+
+### Problem: Can't See Any Integrations
+
+**Solution**: Your organization may not have integrations configured. Contact support at [contact@aitriumos.com](mailto:contact@aitriumos.com) to set up integrations.
+
+### Problem: Can't Update Credentials
+
+**Possible Causes**:
+- Required fields are missing
+- Invalid values entered (e.g., text in a number field)
+- Insufficient permissions
+
+**Solution**: Check that all required fields are filled and valid. Ensure you have administrator permissions.
+
+### Problem: User Not Appearing in Add Users List
+
+**Possible Causes**:
+- User already has access to the credential group
+- User is inactive
+- User belongs to a site not in your network
+
+**Solution**: Verify the user's status and check if they already have access.
+
+### Problem: Credential Updates Not Taking Effect
+
+**Solution**:
+- Verify the update was successful in the **Audit Logs** page
+- Ensure users are assigned to the correct credential group
+- Contact support if the issue persists
+
+### Problem: Integration Execution Failures
+
+**Solution**:
+- Check the **Logs** tab on the integration detail page for error messages
+- Review recent credential changes in **Audit Logs** that might have caused issues
+- Verify network connectivity to the integration endpoint
+- Contact support with the error details from the Integration Logs
+
+---
+
+## Security Best Practices
+
+1. **Limit Access**: Only grant integration access to users who need it
+2. **Regular Audits**: Periodically review user access in each credential group
+3. **Credential Rotation**: Regularly update integration credentials
+4. **Monitor Audit Logs**: Review the Audit Logs page for unusual configuration changes
+5. **Monitor Integration Logs**: Check integration execution logs for unexpected failures or patterns
+6. **Immediate Revocation**: Remove access immediately when users leave or change roles
+7. **Principle of Least Privilege**: Use credential groups to ensure users only access what they need
+
+---
+
+## Getting Help
+
+If you need assistance with integration management:
+
+- **Email**: [contact@aitriumos.com](mailto:contact@aitriumos.com)
+- **Subject Line**: Integration Management Support
+- **Include**:
+  - Your organization name
+  - Integration name
+  - Description of the issue
+  - Screenshots (if applicable)

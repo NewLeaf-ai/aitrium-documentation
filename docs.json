@@ -28,9 +28,23 @@
             ]
           },
           {
+            "group": "Trial Accelerator",
+            "pages": [
+              "trial-accelerator/overview",
+              "trial-accelerator/creating-protocol-trials",
+              "trial-accelerator/advanced-configuration"
+            ]
+          },
+          {
             "group": "Atlas",
             "pages": [
               "aitrium-os/atlas-open-access"
+            ]
+          },
+          {
+            "group": "Aitrium Admin",
+            "pages": [
+              "aitrium-admin/integrations"
             ]
           }
         ]

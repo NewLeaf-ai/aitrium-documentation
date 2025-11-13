@@ -1,0 +1,153 @@
+---
+title: "Creating Protocol-Driven Trials"
+description: "Step-by-step guide for creating a protocol-driven trial using Advanced Mode in Trial Accelerator"
+---
+
+# Creating a Protocol-Driven Trial
+
+This guide outlines the step-by-step process for creating a protocol-driven trial using the Advanced Mode in Trial Accelerator. This mode supports automatic ingestion of trial protocols, digitization of study arms and regimens, and configuration of downstream data workflows for designated hospital sites.
+
+---
+
+## Trial Setup Workflow
+
+### Step 1 – Create a Trial
+
+<img src="/images/trial_accelerator_images/[image1].png" alt="Create new trial button in Trial Dashboard" style={{borderRadius: '8px'}} />
+
+Begin by navigating to the Trial Dashboard and selecting **Create New Trial**. Enter the following:
+
+- Trial Name
+- Start Date
+- Description (optional)
+
+Click **Next** to proceed. Then, select **Protocol Driven Trial** to begin.
+
+<img src="/images/trial_accelerator_images/[image2].png" alt="Protocol Driven Trial selection screen" style={{borderRadius: '8px'}} />
+
+---
+
+### Step 2 – Upload Protocol Document
+
+First, select your protocol method. We recommend creating a draft from PDF.
+
+<img src="/images/trial_accelerator_images/[image3].png" alt="Protocol upload method selection" style={{borderRadius: '8px'}} />
+
+Upload the trial protocol in supported formats (PDF or DOCX). The system will extract:
+
+- Study arms and treatment regimens
+- Dose and fractionation schedules
+- Inclusion/exclusion criteria (informational only)
+- Submission event timelines
+
+You will see something similar to the following example.
+
+<img src="/images/trial_accelerator_images/[image4].png" alt="Extracted study arms and regimens display" style={{borderRadius: '8px'}} />
+
+Each of the study arms and regimens can be explored, confirmed, and edited here.
+
+---
+
+### Step 3 – Confirm Study Arms and Regimens
+
+Review the proposed arms and associated regimens. You can:
+
+- Rename or remove arms
+- Adjust dose, fractionation, and modality settings
+- Add new arms or regimens manually
+
+When the configuration matches your protocol, click **Publish Version** in the top right.
+
+---
+
+### Step 4 – Verify Data Collection Schedule
+
+Next, navigate to **Data Collection Schedule** to confirm and edit the system's parsed submission events.
+
+<img src="/images/trial_accelerator_images/[image5].png" alt="Data Collection Schedule interface" style={{borderRadius: '8px'}} />
+
+For each event:
+
+- Review the name, anticipated event information, and due date information
+
+<img src="/images/trial_accelerator_images/[image6].png" alt="Event details configuration" style={{borderRadius: '8px'}} />
+
+- Adjust timing windows (e.g., ±3 days) or anchor dates
+
+By selecting **Add Data Collection Event**, fully customizable patient/site level events can be added as well:
+
+<img src="/images/trial_accelerator_images/[image7].png" alt="Add custom data collection event" style={{borderRadius: '8px'}} />
+
+Click **Continue** when ready.
+
+---
+
+### Step 5 – Assign De-Identification Policy
+
+Using either the activation checklist modal or navigating to **Settings**, add a DICOM anonymization policy to your trial.
+
+<img src="/images/trial_accelerator_images/[image10].png" alt="De-identification policy assignment interface" style={{borderRadius: '8px'}} />
+
+You will be prompted to one of the following:
+
+- **Create new policy**: Define a new DICOM de-identification policy based on an Aitrium template or from scratch..
+- **Use existing**: Leverage an existing de-identification policy which you've used for other projects.
+
+Once you've selected your policy, click **Publish Latest** to assign the policy to the trial.
+
+---
+
+### Step 6 – Enroll Trial Sites
+
+In the top-level navigation, select **Sites** to view your enrolled sites. To add a site, select **Add Sites** in the top right.
+
+Adding a site will prompt you to select an existing Aitrium Network site:
+
+<img src="/images/trial_accelerator_images/[image8].png" alt="Add sites from Aitrium Network" style={{borderRadius: '8px'}} />
+
+If a site you're looking to add does not exist, send an email to [contact@aitriumos.com](mailto:contact@aitriumos.com) with the following information to begin the onboarding process:
+
+- Site Name
+- Site City, Country, State/Province
+- Site trial POC (First + Last name, Email Address)
+
+Multiple sites may be added at any time. Click **Add X Sites** to add them to the trial.
+
+---
+
+### Step 7 – Assign Designated Site Users
+
+Once a site has been added, you will also have the ability to authorize site users' upload permissions:
+
+<img src="/images/trial_accelerator_images/[image9].png" alt="Authorize site users interface" style={{borderRadius: '8px'}} />
+
+These users will access a guided upload interface tailored to the arm, regimen, and event schedule. At this time, all users authorized to a trial will have the ability to upload patient data.
+
+---
+
+### Step 8 – Configure Data Transfer Integration
+
+The Aitrium team will configure a data transfer integration for your organization.  If you do not have an integration present in the Integrations page, reach out to [contact@aitriumos.com](mailto:contact@aitriumos.com)
+
+
+---
+
+## Trial Activation and Propagation
+
+Once all setup steps are complete:
+
+- The trial is automatically deployed to all assigned sites
+- Designated users will see the trial in the AitriumOS desktop application
+- Upload workflows will be pre-configured based on:
+  - Assigned study arms and regimens + resulting data requirements
+  - Data collection schedules
+  - De-identification policy
+  - Structure nomenclature
+
+Finally, click **Publish Version** in the upper-right hand corner to propagate your trial to all participating sites. Your trial is now live.
+
+---
+
+## Next Steps
+
+Now that your trial is live, you can explore [Advanced Configuration](/trial-accelerator/advanced-configuration) options to further customize your trial setup with dose constraints, benchmark cases, and more.

@@ -1,0 +1,94 @@
+---
+title: "Advanced Trial Configuration"
+description: "Advanced features for configuring dose constraints and data collection schedules in Trial Accelerator"
+---
+
+# Advanced Trial Configuration
+
+Once a protocol-driven trial is live, you have a suite of configuration tools to refine the setup. These features let you tailor arms/regimens, enforce dose constraints, shape the data collection timeline, and set up site-events for ongoing quality and compliance.
+
+---
+
+## 1. Manually Create or Edit Study Arms & Regimens
+
+You can fine-tune the treatment structure of your trial beyond automatic extraction:
+
+- Use the **Arms & Regimens editor** to add new arms (e.g., "Adaptive", "Hypofractionated") or deactivate existing ones
+- Define each regimen's dose, fractionation, and modality (e.g., 60 Gy in 30 fx, IMRT)
+- Reassign patients to updated arms when needed
+- All changes are logged and version-controlled
+
+### Key Features
+- Add unlimited study arms to accommodate trial complexity
+- Configure treatment parameters specific to each arm
+- Maintain audit trail of all modifications
+- Update active trials without disrupting ongoing data collection
+
+---
+
+## 2. Add Dose Constraints to Treatment Regimens
+
+Each regimen can have one or more ROI-specific dose constraints:
+
+### Example Constraints
+- **Spinal Cord**: Dmax < 45 Gy
+- **Heart**: V20Gy < 10%
+- **Lung**: Mean < 12 Gy
+
+### Constraint Types
+- **Hard constraints**: Must-pass requirements that block submission if violated
+- **Soft constraints**: Advisory warnings that flag potential issues
+
+Constraints are used in QA review and scorecard generation to ensure protocol compliance across all participating sites.
+
+---
+
+## 3. Advanced Data Collection Schedules
+
+The schedule of expected data submissions can be customized beyond the protocol-extracted defaults:
+
+### Customization Options
+- **Add/edit events** such as "Week 3 Mid-Tx" or "Follow-up Month 6"
+- **Specify required file types** (e.g., CT, RTSTRUCT, MRI, RTDOSE)
+- **Configure timing logic** (e.g., every 3 months, ±5 days)
+- **Apply globally or to specific arms** for arm-specific data requirements
+
+### Event Types
+- **Patient-level events**: Tied to individual patient timelines (treatment start, follow-ups)
+- **Site-level events**: Apply to the entire site (training, credentialing, audits)
+
+---
+
+## 4. Configure Site-Level Events
+
+To enforce standards and facilitate site onboarding:
+
+### Site-Level Events
+Configure critical milestones for each participating site:
+
+- **Investigator training windows**: Schedule and track required training sessions
+- **Credentialing deadlines**: Ensure sites meet qualification requirements
+- **Interim QA audits**: Schedule periodic quality assessments
+
+These events appear on the trial dashboard for each site, providing visibility into trial readiness and ongoing compliance.
+
+---
+
+## Best Practices
+
+### Version Control
+- Always review draft versions before publishing.  Onced published, the changes to your protocol will automatically take affect.
+- Review the version history to track trial evolution
+
+### Testing
+- Test data collection schedules with sample submissions
+- Verify dose constraints with representative treatment plans
+
+---
+
+## Related Resources
+
+- [Creating Protocol-Driven Trials](/trial-accelerator/creating-protocol-trials) - Complete setup workflow
+- [Trial Accelerator Overview](/trial-accelerator/overview) - Product introduction and key features
+- [Data Tools](/aitrium-os/data-tools) - De-identification and data processing tools
+- [Integrations](/aitrium-admin/integrations) - Data transfer configuration
