@@ -10,6 +10,9 @@
   "fonts":{
     "family": "Reddit Sans"
   },
+  "icons": {
+    "library": "lucide"
+  },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
