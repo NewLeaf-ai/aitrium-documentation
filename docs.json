@@ -52,7 +52,7 @@
           },
           {
             "group": "Aitrium Admin",
-            "icon": "bolt",
+            "icon": "settings",
             "pages": [
               "aitrium-admin/integrations"
             ]
