@@ -61,7 +61,7 @@
       },
       {
         "tab": "API Reference",
-        "icon": "square-terminal",
+        "icon": "code",
         "openapi": {
           "source": "openapi.yaml"
         }
