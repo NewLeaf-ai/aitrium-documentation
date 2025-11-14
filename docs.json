@@ -7,11 +7,14 @@
     "light": "#2684FF",
     "dark": "#0052CC"
   },
+  "fonts":{
+    "family": "Reddit Sans"
+  },
   "favicon": "/favicon.svg",
   "navigation": {
-    "anchors": [
+    "tabs": [
       {
-        "anchor": "Documentation",
+        "tab": "Documentation",
         "icon": "book-open",
         "groups": [
           {
@@ -22,6 +25,7 @@
           },
           {
             "group": "AitriumOS",
+            "icon": "square-terminal",
             "pages": [
               "aitrium-os/overview",
               "aitrium-os/trial-data-submissions"
@@ -29,6 +33,7 @@
           },
           {
             "group": "Trial Accelerator",
+            "icon": "component",
             "pages": [
               "trial-accelerator/overview",
               "trial-accelerator/creating-protocol-trials",
@@ -37,12 +42,14 @@
           },
           {
             "group": "Atlas",
+            "icon": "layout-dashboard",
             "pages": [
               "aitrium-os/atlas-open-access"
             ]
           },
           {
             "group": "Aitrium Admin",
+            "icon": "bolt",
             "pages": [
               "aitrium-admin/integrations"
             ]
@@ -50,22 +57,13 @@
         ]
       },
       {
-        "anchor": "API Reference",
+        "tab": "API Reference",
         "icon": "square-terminal",
         "openapi": {
           "source": "openapi.yaml"
         }
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Aitrium Dashboard",
-          "href": "https://app.aitriumos.com",
-          "icon": "chart-line"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
