@@ -1,0 +1,93 @@
+---
+title: "Network Management"
+description: "Create and manage internal sites, view external sites, and configure site identifiers for data transfers"
+---
+
+## Overview
+
+Network Management is accessed at **Dashboard → Network**. It provides a unified view of your organization's sites:
+
+- **Internal sites** — Sites your organization creates and manages directly
+- **External sites** — Sites created by Aitrium and connected to your organization for cross-organizational workflows (e.g., multi-site clinical trials)
+
+---
+
+## Network Dashboard
+
+The Network page displays statistics and a searchable site table.
+
+### Statistics
+
+- **My Sites** — Number of internal sites your organization manages
+- **External Sites** — Number of connected external sites
+- **Total Sites** — Combined count
+- **Organizations** — Number of organizations in your network (including your own)
+
+### Site Table
+
+| Column | Description |
+|--------|-------------|
+| **Site Name** | Name of the site |
+| **Organization** | Owning organization, with an **Internal** or **External** badge |
+| **Type** | Internal Site or External Site |
+| **Site External ID** | External identifier for data transfer file naming (editable) |
+| **Org External ID** | External organization identifier (editable for external entries) |
+
+Use the filter toggle (**All / Internal / External**) to narrow the view, or search by organization or site name.
+
+<img src="/images/admin/network-management/network-overview.png" alt="Network management dashboard showing site statistics and table" style={{borderRadius: '8px'}} />
+
+---
+
+## Internal Sites
+
+### Creating an Internal Site
+
+1. Navigate to **Dashboard → Network**
+2. Click **Create Site**
+3. Enter the **Site Name**
+4. Optionally enter a **Site External ID** — this is used in file naming conventions for data transfers (see [External IDs](#external-ids) below)
+5. Optionally check **Invite a user to this site** to send an invitation during site creation:
+   - Enter the user's email address
+   - Select a role
+6. Click **Create**
+
+<img src="/images/admin/network-management/create-internal-site.png" alt="Create internal site dialog with name, external ID, and optional user invite fields" style={{borderRadius: '8px'}} />
+
+Internal sites belong to your organization and can have users assigned to them through [User Management](/aitrium-admin/user-management).
+
+---
+
+## External Sites
+
+### How External Sites Work
+
+External sites are created by Aitrium and connected to your organization to enable cross-organizational data workflows. You **cannot** create external sites yourself — they appear in your network automatically once Aitrium connects them to your organization.
+
+External sites display:
+- The site name and the external organization they belong to
+- An **External** badge to distinguish them from your internal sites
+- External ID fields for integration mapping
+
+If you need an external site added to your network, contact Aitrium support at [support@aitriumos.com](mailto:support@aitriumos.com).
+
+---
+
+## External IDs
+
+### Purpose
+
+External IDs map your internal site and organization identifiers to the naming conventions expected by integration partners. When a **Site External ID** is set, it is used in the file naming convention for transferred patient datasets — ensuring files are named according to the receiving system's expectations.
+
+### Setting a Site External ID
+
+1. Find the site in the Network table
+2. Click the **Site External ID** cell to enter inline edit mode
+3. Enter the external identifier
+4. Click the **checkmark** (✓) to confirm, or **X** to cancel
+
+<img src="/images/admin/network-management/external-id-editing.png" alt="Inline editing of a site external ID in the network table" style={{borderRadius: '8px'}} />
+
+<Note>
+Org External IDs follow the same inline editing pattern and are available on external organization entries. They map your organization's identity to the external system's naming convention.
+</Note>

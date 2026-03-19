@@ -1,23 +1,18 @@
 ---
-title: "Integration Management"
-description: "Manage data transfer integrations, credentials, and site user permissions"
+title: "Integrations"
+description: "Configure data transfer integrations, manage credential groups, and control trial-level access"
 ---
 
 ## Overview
 
-The Integrations page allows organization administrators to manage data transfer integrations, credentials, and user permissions. This guide will help you understand how to configure and manage integrations for your organization.
+The Integrations page allows organization administrators to manage data transfer integrations, credentials, and user permissions. Integrations are accessed at **Dashboard → Integrations**.
 
----
+Each integration card displays:
+- Integration name
+- Credential type (**Cloud Credentials** or **Local Config**)
+- Number of sites using the integration
 
-## Accessing Your Integrations
-
-1. Navigate to **Dashboard** > **Integrations** from the main menu
-2. You'll see a list of all integrations configured for your organization
-3. Each integration card displays:
-   - Integration name
-   - Credential type (Cloud Credentials or Local Config)
-   - Number of sites using the integration
-4. Click on any integration card to manage its settings
+Click on any integration card to manage its settings.
 
 <img src="/images/integrations/integrations_page.png" alt="Integrations page showing list of configured integrations" style={{borderRadius: '8px'}} />
 
@@ -29,20 +24,20 @@ If no integrations appear, your organization hasn't been set up with any data tr
 
 ## Credential Groups
 
-Credential Groups allow you to manage different sets of credentials and user permissions within the same integration. This is useful when:
+Credential groups allow you to manage different sets of credentials within the same integration. This is useful when:
 
-- Different sites require different credentials
-- Different teams need access to different systems
-- You want to segregate access for security or organizational reasons
+- Different sites require different connection endpoints or credentials
+- You want to segregate credentials for security or organizational reasons
+- Different trials need to route data through different systems
 
-<img src="/images/integrations/integration_details_page_credential_groups.png" alt="Integration details page showing credential groups" style={{borderRadius: '8px'}} />
+<img src="/images/integrations/integration_details_page_credential_groups.png" alt="Integration details page showing credential groups in the left sidebar" style={{borderRadius: '8px'}} />
 
 ### Key Features
 
 - **Multiple Groups**: Create multiple credential groups per integration
-- **Site Assignment**: Assign specific sites to each credential group
-- **User Permissions**: Control which users have access to each group
-- **Independent Credentials**: Each group can have different credential values
+- **Independent Credentials**: Each group has its own connection configuration
+- **Trial Linking**: Link trials to a credential group to control which credentials are used for data transfers
+- **Per-Site User Access**: Control which users at each site can access the integration, per trial
 
 ### Creating a Credential Group
 
@@ -51,7 +46,7 @@ Credential Groups allow you to manage different sets of credentials and user per
 3. Click **Create New Group** in the left sidebar
 4. Provide:
    - **Group Name**: A descriptive name for the credential group
-   - **Site Selection**: Choose which sites will use these credentials
+   - **Description** (optional): Additional context about the group's purpose
 5. Click **Create** to save the new group
 
 <img src="/images/integrations/new_credential_group.png" alt="Create new credential group dialog" style={{borderRadius: '8px'}} />
@@ -60,7 +55,7 @@ Credential Groups allow you to manage different sets of credentials and user per
 
 1. Select the credential group from the left sidebar
 2. Click the **Edit** button (pencil icon)
-3. Update the group name or site assignments
+3. Update the group name or description
 4. Click **Save** to apply changes
 
 ### Deleting a Credential Group
@@ -69,109 +64,233 @@ Credential Groups allow you to manage different sets of credentials and user per
 2. Click the **Delete** button (trash icon)
 3. Confirm the deletion in the dialog
 
-**Note**: You must have at least one credential group per integration. The last group cannot be deleted.
+<Note>
+You must have at least one credential group per integration. The last group cannot be deleted.
+</Note>
 
 ---
 
 ## Managing Credentials
 
+Each credential group has a **Credentials** tab where you configure the connection details for that group.
+
 ### Viewing Current Credentials
 
-1. Open an integration and navigate to **Credential Groups**
-2. Select a credential group from the left sidebar
-3. The credential form will display all available fields
-4. Secret fields (passwords) are masked for security
+1. Select a credential group from the left sidebar
+2. The **Credentials** tab displays all configuration fields
+3. Sensitive fields (passwords, private keys) display a **"Stored securely"** badge — values are never shown in plain text
 
 ### Updating Credentials
 
 1. Select a credential group
-2. Modify the credential fields as needed:
+2. Click **Edit** to enter edit mode
+3. Modify the credential fields as needed:
    - **Text fields**: Enter alphanumeric values
    - **Number fields**: Enter numeric values only
-   - **Boolean fields**: Toggle switches on/off
-   - **Secret fields**: Enter passwords (will be masked)
-3. Click **Update Credentials** to save changes
-4. Click **Reset** to discard unsaved changes
+   - **Boolean fields**: Toggle on/off
+   - **Secret fields**: Enter passwords (masked on input)
+   - **File fields**: Upload key files or certificates
+4. Click **Save** to publish changes
+5. Click **Cancel** to discard unsaved changes
 
-### Publishing Credentials
+### How Credential Updates Propagate
 
 When you update credentials:
-- Changes are automatically published to all users in the credential group
-- Users across all assigned sites receive the updated credentials
-- The system tracks all credential updates in the activity log
+- Changes are automatically published to all sites assigned to the credential group
+- Credentials are re-encrypted with each site's encryption key before distribution
+- The system tracks all credential updates in the [Audit Log](/aitrium-admin/audit-logging)
 
-**Important**: Credential updates affect all users with access to the credential group. Ensure credentials are correct before publishing.
+<Warning>
+Credential updates affect all trials and users linked to this credential group. Ensure credentials are correct before saving.
+</Warning>
 
 ---
 
-## Managing User Access
+## SFTP Configuration
 
-### Understanding User Permissions
+When an integration uses SFTP for data transfer, credential groups contain the following configuration fields:
 
-Users must be granted explicit permission to access integration credentials. Permissions are managed at the credential group level, allowing fine-grained access control.
+| Field | Required | Description |
+|-------|----------|-------------|
+| **Host** | Yes | SFTP server hostname or IP address |
+| **Port** | Yes | SFTP server port (typically 22) |
+| **SFTP Username** | Yes | Authentication username |
+| **SFTP Password** | Yes | Authentication password |
+| **Root Directory** | No | Base directory path on the SFTP server. If omitted, the default directory is used. |
+| **Private Key (RSA)** | No | RSA private key for key-based authentication. Paste the full PEM-encoded key in OpenSSH format. ECDSA and PuTTY `.ppk` formats are not supported. |
+| **Private Key Password** | No | Passphrase for the private key, if the key is encrypted. |
 
-### Viewing Current Users
+<Note>
+When both password and private key are provided, key-based authentication takes precedence.
+</Note>
 
-1. Select a credential group
-2. Navigate to the **Users** tab
-3. View the list of users with access to this credential group
-4. Use filters to:
-   - Search by name or email
-   - Filter by site
+---
 
-<img src="/images/integrations/integration_details_page_users.png" alt="Integration users tab showing current users with access" style={{borderRadius: '8px'}} />
+## Credential Encryption
 
-### Adding Users
+All integration credentials are encrypted at rest using organization-level encryption keys managed through a Key Management Service (KMS).
 
-1. Navigate to the **Users** tab within a credential group
-2. Click **Add Users**
-3. Select the site that you wish to permission users from.
-4. Select users from the list:
-   - Use the search bar to find specific users
-   - Filter by site or organization
-   - Select multiple users at once
-5. Click **Add Users**
-6. The system automatically:
-   - Grants access to the credential group
-   - Publishes credentials to the new users
-   - Records the action in the activity log
+### Owning Organization
 
-<img src="/images/integrations/add_user_integration.png" alt="Add users dialog for permissioning users to an integration" style={{borderRadius: '8px'}} />
+Your organization owns the credential group and its encryption keys. Credentials are encrypted with your organization's KMS key before storage — they are never stored in plaintext.
 
-**Note**: Only active users in your Aitrium Network are available for selection. Users who already have access are not shown in the list.
+### External Participating Sites
 
-### Removing User Access
+When external provider sites are assigned to a credential group through trial linking:
 
-1. Navigate to the **Users** tab
-2. Find the user you want to remove
-3. Click the **Remove** button next to their name
-4. Confirm the removal in the dialog
-5. The user immediately loses access to the integration credentials
+- Credentials are re-encrypted with site-level keys for secure distribution
+- Each site receives only the credentials relevant to their assignment
+- Credential transport uses session-derived encryption for additional security
 
-**Warning**: Removing access cannot be undone. The user will need to be re-added if you change your mind.
+This ensures that credentials are never transmitted in plaintext, and each participant only has access to the credentials they need.
+
+---
+
+## Good to Know
+
+- **Credential updates apply to all sites in a group** — When you update a credential group's connection details, the change propagates to every site using that group across all linked trials. To update credentials for a single site, that site must be in its own credential group.
+- **Credential groups cannot be shared across integrations** — Each credential group belongs to a single integration. If two integrations need the same SFTP endpoint, each requires its own credential group.
+- **A credential group in use cannot be deleted** — You must first reassign or remove all sites and trials using the group before it can be deleted. The default credential group can never be deleted.
+- **Group names must be unique within an integration** — Two credential groups under the same integration cannot share a name.
+- **Private key format** — Only RSA private keys in OpenSSH format are supported for SFTP key-based authentication. ECDSA and PuTTY `.ppk` keys are not supported.
+
+---
+
+## Managing Trial Access
+
+Integration permissions are managed at the trial level. Each credential group has a **Trials** tab where you link trials and control per-site user access.
+
+### Permission Hierarchy
+
+Permissions follow a trial-scoped hierarchy:
+
+**Integration → Credential Group → Trial → Site → Users**
+
+- An integration has one or more **credential groups**, each with its own connection configuration
+- Each credential group can be linked to one or more **trials**
+- Different trials can use different credential groups — even for the same site. This means a site can have separate credentials for each trial it participates in.
+- At each site, you control which **users** have access — either all site users or a selected subset
+
+### Linking a Trial to a Credential Group
+
+1. Select a credential group from the left sidebar
+2. Navigate to the **Trials** tab
+3. Click **Add Trial**
+4. Search for and select the trial from the list
+
+<Note>
+Trials already linked to this credential group are excluded from the search results. Credentials must be configured before you can add trials.
+</Note>
+
+### Per-Trial Credential Groups
+
+Different trials can be linked to different credential groups, even when they share the same sites. This allows you to:
+
+- Route data for Trial A through one SFTP endpoint and Trial B through another
+- Use separate credentials for different sponsors or data destinations
+- Isolate trial data flows without creating duplicate sites
+
+When the same site participates in multiple trials with different credential groups, each trial's data transfers use the credentials from its linked credential group.
+
+### Trial Overview
+
+Once trials are linked, the Trials tab displays each trial as a collapsible row:
+
+- **Trial name** with site count and active/inactive status
+- **Readiness indicators**:
+  - Green dot — Site is transfer-ready (credentials and users configured)
+  - Red dot — Site is blocked (missing credentials or user configuration)
+  - Summary: "N sites not ready" when blocked sites exist
+- **Header metrics**: Number of trials linked and total access patterns configured
+
+Expand a trial to see all sites and their access configuration.
+
+<img src="/images/integrations/credential-group-trials-tab.png" alt="Credential group Trials tab showing linked trials with site readiness indicators" style={{borderRadius: '8px'}} />
+
+### Managing Site Access
+
+Click **Manage access** on any site within a trial to configure user permissions:
+
+**Access Modes:**
+
+| Mode | Description |
+|------|-------------|
+| **All site users** | Every user at the site automatically has access to the integration for this trial. New users added to the site will inherit access. |
+| **Selected users** | Only explicitly chosen users have access. You must add users individually. |
+
+**In "Selected users" mode:**
+- Search for users by name
+- Click **Add** to grant a user access
+- Click **Remove** to revoke a user's access
+- The drawer shows users split into "Has Access" and "No Access" sections
+
+<img src="/images/integrations/manage-site-access-drawer.png" alt="Site access management drawer showing access mode selection and user list" style={{borderRadius: '8px'}} />
+
+### Removing a Trial
+
+1. Expand or hover over the trial in the Trials tab
+2. Click the dropdown menu on the trial header
+3. Select **Remove Trial**
+4. Confirm the removal
+
+Removing a trial from a credential group revokes all associated user access for that trial.
+
+---
+
+## Managing Access from Trials
+
+In addition to the Integrations page, admins can manage integration access directly from a trial's detail page. This is useful when you're working within a trial and want to configure site access without navigating to the Integrations section.
+
+1. Navigate to **Dashboard → Projects → [Trial Name]**
+2. Switch to the **Sites** tab
+3. Each site row displays an **Access** column:
+   - Shows the number of users with access (e.g., "3 Users")
+   - Or **"Set Access"** if no permissions are configured yet
+4. Click the access count or select **Manage Access** from the row's dropdown menu
+5. The site access drawer opens — the same interface described in [Managing Site Access](#managing-site-access) above
+
+<img src="/images/integrations/project-sites-access-column.png" alt="Trial sites tab showing the Access column with user counts and Manage Access action" style={{borderRadius: '8px'}} />
+
+<Note>
+Both entry points — the Integrations page and the Trial sites tab — manage the same underlying permissions. Changes made in one location are immediately reflected in the other.
+</Note>
 
 ---
 
 ## Integration Logs
 
-The Integration Logs tab provides technical execution logs showing when the integration has run and whether it succeeded or failed. This is useful for debugging integration issues.
+The Integration Logs tab provides execution logs showing when the integration has run and whether it succeeded or failed. This is useful for monitoring integration health and debugging issues.
 
-### Viewing Integration Logs
+### Log Analytics
 
-1. Open an integration
-2. Navigate to the **Logs** tab
-3. View chronological list of integration executions
+The **Overview** tab provides a visual summary of integration execution history, including:
+- Time series chart of success, warning, and failure events
+- Recent activity list (last 10 events)
+- Summary metrics: total events, success rate, error count, warning count
 
-<img src="/images/integrations/integration_logs.png" alt="Integration logs showing execution history and status" style={{borderRadius: '8px'}} />
+The **Errors** tab breaks down failures by category:
+- **Authentication** — credential or permission issues
+- **Connection** — network or timeout failures
+- **Configuration** — setup or path issues
+- **Transfer** — upload/download failures
+- **Validation** — format or schema errors
 
-### Information Tracked
+<img src="/images/integrations/integration-log-analytics.png" alt="Integration log analytics showing execution metrics and error breakdown" style={{borderRadius: '8px'}} />
 
-- **Execution Status**: Success or failure of each integration run
-- **Timestamps**: When each execution occurred
-- **Error Messages**: Technical details when executions fail
-- **Execution Details**: Information about what was processed
+### Execution Details
 
-### Using Integration Logs for Troubleshooting
+The **Details** tab shows a chronological table of all integration executions:
+
+| Column | Description |
+|--------|-------------|
+| **Timestamp** | When the execution occurred |
+| **Action** | What the integration performed |
+| **Status** | Success or failure |
+| **Details** | Additional context about the execution |
+
+The table is searchable and sortable by timestamp (default: newest first). Use the time range filter (1 day, 7 days, 30 days) to narrow results.
+
+### Troubleshooting with Logs
 
 - Identify when an integration last ran successfully
 - Diagnose technical failures or connection issues
@@ -180,57 +299,45 @@ The Integration Logs tab provides technical execution logs showing when the inte
 
 ---
 
-## Audit Logs
-
-Configuration changes to integrations (credential updates, user access changes, credential group modifications) are tracked in the **Audit Logs** page, which is separate from the integration-specific logs.
-
-### Accessing Audit Logs
-
-Navigate to the **Audit Logs** page from the main dashboard to view:
-- Credential updates and who made them
-- User access changes (additions and removals)
-- Credential group creation, updates, and deletion
-- Affected resources (sites and users impacted by each change)
-- Timestamps for all configuration changes
-
-This provides a complete audit trail for compliance and security purposes.
-
----
-
 ## Common Tasks
 
-### Scenario 1: Onboarding a New Team Member
+### Granting a User Access to a Trial's Integration
 
-1. Navigate to **Integrations** > Select the integration
-2. Select the appropriate **Credential Group**
-3. Go to the **Users** tab
-4. Click **Permission New Users**
-5. Find and select the new team member
-6. Click **Add Selected Users**
+1. Navigate to **Integrations** → Select the integration
+2. Select the **Credential Group** linked to the trial
+3. Go to the **Trials** tab and expand the trial
+4. Click **Manage access** on the relevant site
+5. Set the access mode to **Selected users** (if not already)
+6. Find and **Add** the user
 
-### Scenario 2: Rotating Integration Credentials
+Alternatively, navigate to **Projects → [Trial] → Sites** tab and click **Manage Access** on the site row.
 
-1. Navigate to **Integrations** > Select the integration
+### Rotating Integration Credentials
+
+1. Navigate to **Integrations** → Select the integration
 2. Select the **Credential Group** to update
-3. Update the credential fields with new values
-4. Click **Update Credentials**
-5. Verify the update in the **Audit Logs** page
+3. Go to the **Credentials** tab and click **Edit**
+4. Update the credential fields with new values
+5. Click **Save**
+6. Verify the update in the [Audit Logs](/aitrium-admin/audit-logging) page
 
-### Scenario 3: Setting Up Integration for a New Site
+### Connecting a New Trial to a Credential Group
 
-1. Navigate to **Integrations** > Select the integration
-2. Create a **New Credential Group** or edit an existing one
-3. Add the new site to the credential group
-4. Enter or update credentials for the site
-5. Add users from the new site who need access
-6. Click **Update Credentials** to publish
+1. Navigate to **Integrations** → Select the integration
+2. Select the **Credential Group** (or create a new one)
+3. Ensure credentials are configured on the **Credentials** tab
+4. Go to the **Trials** tab and click **Add Trial**
+5. Search for and select the trial
+6. Expand the trial and configure site access for each site
 
-### Scenario 4: Segregating Access by Department
+### Restricting Access to Specific Users at a Site
 
-1. Create separate **Credential Groups** for each department
-2. Assign relevant sites to each group
-3. Configure credentials specific to each group (if different)
-4. Add users from each department to their respective group
+1. Navigate to the credential group's **Trials** tab
+2. Expand the trial containing the site
+3. Click **Manage access** on the site
+4. Change the access mode from **All site users** to **Selected users**
+5. Add only the users who should have access
+6. Users not explicitly added will lose access
 
 ---
 
@@ -249,41 +356,38 @@ This provides a complete audit trail for compliance and security purposes.
 
 **Solution**: Check that all required fields are filled and valid. Ensure you have administrator permissions.
 
-### Problem: User Not Appearing in Add Users List
+### Problem: Can't Add a Trial to a Credential Group
 
 **Possible Causes**:
-- User already has access to the credential group
-- User is inactive
-- User belongs to a site not in your network
+- Credentials have not been configured yet for the group
+- The trial is already linked to this credential group
 
-**Solution**: Verify the user's status and check if they already have access.
+**Solution**: Configure credentials on the **Credentials** tab first. Check whether the trial is already linked.
+
+### Problem: Site Shows as "Blocked" (Red Dot)
+
+**Possible Causes**:
+- Credentials are missing or incomplete for the credential group
+- No users have been granted access at the site
+
+**Solution**: Verify credentials are configured on the **Credentials** tab. Click **Manage access** on the blocked site and ensure at least one user has access.
 
 ### Problem: Credential Updates Not Taking Effect
 
 **Solution**:
-- Verify the update was successful in the **Audit Logs** page
-- Ensure users are assigned to the correct credential group
+- Verify the update was successful in the [Audit Logs](/aitrium-admin/audit-logging) page
+- Ensure the trial's sites are assigned to the correct credential group
 - Contact support if the issue persists
 
 ### Problem: Integration Execution Failures
 
 **Solution**:
 - Check the **Logs** tab on the integration detail page for error messages
-- Review recent credential changes in **Audit Logs** that might have caused issues
+- Review recent credential changes in [Audit Logs](/aitrium-admin/audit-logging) that might have caused issues
 - Verify network connectivity to the integration endpoint
 - Contact support with the error details from the Integration Logs
 
----
-
-## Security Best Practices
-
-1. **Limit Access**: Only grant integration access to users who need it
-2. **Regular Audits**: Periodically review user access in each credential group
-3. **Credential Rotation**: Regularly update integration credentials
-4. **Monitor Audit Logs**: Review the Audit Logs page for unusual configuration changes
-5. **Monitor Integration Logs**: Check integration execution logs for unexpected failures or patterns
-6. **Immediate Revocation**: Remove access immediately when users leave or change roles
-7. **Principle of Least Privilege**: Use credential groups to ensure users only access what they need
+For audit log questions, see [Audit Logging](/aitrium-admin/audit-logging).
 
 ---
 

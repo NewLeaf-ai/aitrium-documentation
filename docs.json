@@ -44,16 +44,13 @@
             ]
           },
           {
-            "group": "Atlas",
-            "icon": "layout-dashboard",
-            "pages": [
-              "aitrium-os/atlas-open-access"
-            ]
-          },
-          {
             "group": "Aitrium Admin",
             "icon": "settings",
             "pages": [
+              "aitrium-admin/overview",
+              "aitrium-admin/user-management",
+              "aitrium-admin/network-management",
+              "aitrium-admin/audit-logging",
               "aitrium-admin/integrations"
             ]
           }

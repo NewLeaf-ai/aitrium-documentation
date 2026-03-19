@@ -1,0 +1,132 @@
+---
+title: "User Management"
+description: "Invite users, manage roles, assign sites, and control access across your organization"
+---
+
+## Overview
+
+User Management is accessed at **Dashboard → Users**. Admins can invite new users, manage existing user roles and site assignments, and track invitation status.
+
+Aitrium has two customer-facing roles:
+- **Admin** — Organization-wide access to all features, including administration
+- **User** — Access scoped to an assigned site
+
+---
+
+## Users Dashboard
+
+The Users page provides an at-a-glance summary of your organization's user base along with a detailed table for management.
+
+### Statistics
+
+- **Total Users** — Count of active and inactive users
+- **Administrators** — Number of users with the Admin role
+- **Pending Invitations** — Invitations awaiting acceptance
+- **Invitation Status** — Breakdown of accepted vs. expired invitations
+
+### User Table
+
+The table displays all users and invitations with the following columns:
+
+| Column | Description |
+|--------|-------------|
+| **Email** | User's email address |
+| **Status** | Active, Inactive, Pending, or Expired |
+| **Role** | Admin or User |
+| **Site** | Organization-wide (for Admins) or the assigned site name |
+| **Last Activity** | Most recent activity or creation date |
+
+You can toggle between a **unified view** (users and invitations in a single list) or a **tabbed view** (separate tabs for each). Use the status and site filters to narrow the list, or search by name or email.
+
+<img src="/images/admin/user-management/users-dashboard.png" alt="Users dashboard showing statistics cards and user table" style={{borderRadius: '8px'}} />
+
+---
+
+## Inviting Users
+
+### Inviting an Admin User
+
+1. Navigate to **Dashboard → Users**
+2. Click **Invite User**
+3. Enter the user's email address
+4. Select the **Admin** role
+5. Click **Send Invitation**
+
+Admin users have organization-wide access — no site assignment is needed.
+
+### Inviting a User with Site Assignment
+
+1. Navigate to **Dashboard → Users**
+2. Click **Invite User**
+3. Enter the user's email address
+4. Select the **User** role
+5. Select a **Site** from the dropdown
+6. Click **Send Invitation**
+
+User-role invitations require a site assignment. The user will only have access to data and workflows associated with that site.
+
+<img src="/images/admin/user-management/invite-user-dialog.png" alt="Invite user dialog with role and site selection" style={{borderRadius: '8px'}} />
+
+### Invitation Lifecycle
+
+- Invitations are valid for **7 days** from creation
+- Status flow: **Pending** → **Accepted** (user completes registration) or **Expired** (7 days elapsed)
+- Only one active invitation can exist per email address
+- If a previously deactivated user is re-invited, the system handles it as a **reactivation** — their existing account is restored with the new role and site assignment
+
+---
+
+## Managing Invitations
+
+### Refreshing an Invitation
+
+Refreshing extends the invitation expiration by 7 days from the current time:
+
+1. Find the pending or expired invitation in the Users table
+2. Click the actions menu (⋮) → **Resend Invitation**
+3. The invitation link is refreshed and re-sent to the user's email
+
+### Revoking an Invitation
+
+Revoking permanently removes a pending invitation:
+
+1. Find the invitation in the Users table
+2. Click the actions menu (⋮) → **Remove Invitation**
+3. Confirm the removal
+
+<Note>
+Revoking an invitation permanently deletes it. If you need to re-invite the user, you'll need to create a new invitation.
+</Note>
+
+---
+
+## Managing Existing Users
+
+### Changing a User's Role
+
+1. Find the user in the Users table
+2. Click the actions menu (⋮) → **Edit User**
+3. Change the **Role** (Admin or User)
+4. If changing to User, select a site assignment
+5. Save changes
+
+<img src="/images/admin/user-management/edit-user-dialog.png" alt="Edit user dialog showing role and site fields" style={{borderRadius: '8px'}} />
+
+### Adding or Changing User Sites
+
+1. Find the user in the Users table
+2. Click the actions menu (⋮) → **Edit User**
+3. Update the **Site** assignment
+4. Save changes
+
+<Note>
+Admin-role users have organization-wide access and are not restricted to specific sites. Site assignment only applies to the User role.
+</Note>
+
+### Deactivating a User
+
+1. Find the user in the Users table
+2. Click the actions menu (⋮) → **Deactivate User**
+3. Confirm deactivation
+
+Deactivated users immediately lose access to the platform. Their account status changes to **Inactive** and their organization association is removed. They can be re-invited later, which triggers a reactivation flow that restores their account with the new role and site assignment.
