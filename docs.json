@@ -31,7 +31,14 @@
             "icon": "square-terminal",
             "pages": [
               "aitrium-os/overview",
-              "aitrium-os/trial-data-submissions"
+              "aitrium-os/protocol-submissions"
+            ]
+          },
+          {
+            "group": "AitriumOS (No Protocol)",
+            "hidden": true,
+            "pages": [
+              "aitrium-os/no-protocol-submissions"
             ]
           },
           {

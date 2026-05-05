@@ -146,16 +146,6 @@ This ensures that credentials are never transmitted in plaintext, and each parti
 
 ---
 
-## Good to Know
-
-- **Credential updates apply to all sites in a group** — When you update a credential group's connection details, the change propagates to every site using that group across all linked trials. To update credentials for a single site, that site must be in its own credential group.
-- **Credential groups cannot be shared across integrations** — Each credential group belongs to a single integration. If two integrations need the same SFTP endpoint, each requires its own credential group.
-- **A credential group in use cannot be deleted** — You must first reassign or remove all sites and trials using the group before it can be deleted. The default credential group can never be deleted.
-- **Group names must be unique within an integration** — Two credential groups under the same integration cannot share a name.
-- **Private key format** — Only RSA private keys in OpenSSH format are supported for SFTP key-based authentication. ECDSA and PuTTY `.ppk` keys are not supported.
-
----
-
 ## Managing Trial Access
 
 Integration permissions are managed at the trial level. Each credential group has a **Trials** tab where you link trials and control per-site user access.

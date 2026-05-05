@@ -1,0 +1,237 @@
+---
+title: "Clinical Trial Data Submissions"
+description: "Step-by-step guide for submitting patient data for protocol-driven clinical trials using AitriumOS."
+---
+
+## Overview
+
+Protocol-driven trials arrive in AitriumOS pre-configured with study arms, regimens, data collection schedules, and QA policies from [Trial Accelerator](/trial-accelerator/overview). The submission process is guided — each patient's required contributions are scheduled automatically based on the protocol configuration.
+
+This guide covers the complete workflow: configuring a patient's treatment regimen, reviewing scheduled contributions, and submitting data through the five-step submission flow.
+
+{/* TODO: Add Arcade walkthrough embed for protocol submission flow */}
+
+## Add Patient Regimen
+
+Before submitting data, each patient must be configured with their treatment details. Open the **Patient Configuration** modal from the trial's patient list.
+
+### Setup Checklist
+
+The modal presents three required fields:
+
+1. **Randomization Date** — When the patient was enrolled in the trial
+2. **Study Arm** — Which treatment arm the patient is assigned to
+3. **Patient Regimens** — One or more treatment regimens with start dates
+
+<Info>
+  Status indicators show configuration progress: green = complete, amber = required field missing, lock icon = managed by trial manager (read-only).
+</Info>
+
+<div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
+  <iframe 
+    src="https://supercut.ai/embed/aitrium/ehp-ci8c9NevC6EOyx98dd?embed=full"
+    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowFullScreen
+  />
+</div>
+
+### Adding a Regimen
+
+1. Select a **Study Arm** from the dropdown — this filters the available regimens
+2. Choose a regimen from the searchable dropdown, which displays:
+   - Regimen name
+   - Number of fractions
+   - Dose range (min–max Gy or single target dose)
+3. Enter a **Treatment Start Date** (required), and optionally a Treatment End Date
+4. To add multiple regimens, queue them and click **Save N Regimens** to save in batch
+
+<Note>
+  Regimens already assigned to the patient are disabled in the dropdown to prevent duplicates.
+</Note>
+
+After saving, the system automatically generates **Scheduled Contributions** based on the protocol's Data Collection Events, anchored to the patient's dates (randomization, regimen start, etc.).
+
+## Submit Scheduled Contributions
+
+The **Scheduled Contributions** table displays all pending data submissions for the trial:
+
+- **Site-level contributions** appear at the top of the table
+- **Patient-level contributions** are grouped by patient below
+
+Each row shows:
+- **Status badge** — OVERDUE, SCHEDULED, or COMPLETED
+- **Due date** — When the data is expected
+- **Event name** — The data collection event (e.g., "Baseline CT", "Fraction 1")
+- **Associated datasets** — What data types are required
+
+<img src="/images/trial_submissions/patient_schedules.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
+
+To begin a submission, click **Submit** on the desired contribution row. This opens the guided submission flow.
+
+## Submission Flow
+
+The submission flow consists of five sequential steps. Each step must complete successfully before proceeding to the next.
+
+
+### 1. Dataset Analysis
+
+Select the local directory containing the patient's DICOM data. The **Dataset Analyzer** scans the directory and produces:
+
+- **DICOM file inventory** — Patient, Study, and Series structure
+- **Modality breakdown** — CT, MR, RTSTRUCT, RTPLAN, RTDOSE, and other modalities detected
+- **Protocol validation** — Checks data against the trial's specific requirements
+- **Missing data warnings** — Color-coded indicators for gaps:
+  - Red: required data missing
+  - Amber: optional data missing
+
+Review the analysis results and address any data gaps before proceeding.
+
+<img src="/images/trial_submissions/dataset_analyzer_results.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
+
+### 2. RT Structure Standardization
+
+<Note>
+  This step runs automatically when RTSTRUCT files are present in the dataset. If no RT structures exist, this step is skipped.
+</Note>
+
+The standardizer maps your local structure names to TG-263 standard nomenclature and the trial's specific structure requirements.
+
+Review the mapping table:
+- **Left column** — Your original structure names
+- **Right column** — Standardized / trial-required names (editable via searchable dropdown)
+
+Protocol-required structures are highlighted to ensure all necessary mappings are confirmed before proceeding.
+
+<img src="/images/trial_submissions/map_target_structures.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
+<img src="/images/trial_submissions/map_oar_structures.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
+
+### 3. DICOM Metadata De-identification
+
+This step protects patient privacy by removing or replacing personally identifiable information (PII) from DICOM metadata according to the trial's assigned de-identification policy.
+
+The process has three sub-phases:
+
+1. **Pre-anonymization validation** — Checks whether the data already meets the trial's de-identification policy requirements
+2. **De-identification** — Removes or replaces PII fields (patient name, patient ID, dates, and other identifying metadata) per the trial's policy. A progress bar tracks the operation.
+3. **Post-anonymization validation** — Confirms the anonymized files meet all policy requirements before proceeding
+
+<Warning>
+  If errors occur during de-identification (e.g., corrupt files, insufficient disk space), the system provides specific guidance and a retry option. You can also select a new source directory to start over.
+</Warning>
+
+### 4. QA Policy Evaluation
+
+<Note>
+  This step only appears if the protocol has a QA policy assigned. If no QA policy is configured, the flow proceeds directly to Data Transfer.
+</Note>
+
+QA policy evaluation assesses the dosimetric and structural quality of the submitted dataset:
+
+1. **Extract QA Facts** — The system identifies the best RT study pair (RTSTRUCT + RTDOSE), computes DVH metrics, and evaluates them against the protocol's policy constraints. A progress bar is shown with status updates.
+
+2. **Review QA Metrics** — A table displays the extracted metrics (e.g., D95, D5, Dmean, Dmax, Dmin, V100%) with color-coded results:
+   - **Green** — Within acceptable range (Per Protocol)
+   - **Amber** — Acceptable variation
+   - **Red** — Unacceptable deviation
+
+3. **Manual Entry** (optional) — Override or supplement automated metrics where the system could not extract values automatically
+
+4. Click **Acknowledge & Proceed** to confirm the QA results
+
+<img src="/images/trial_submissions/qa_metrics_review.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
+
+
+### 5. Data Transfer
+
+The final step uploads the processed dataset to the trial's configured destination.
+
+1. **Pre-submission review** — Verify the summary of what will be submitted:
+   - Patient ID and Site ID
+   - Number of DICOM series grouped by modality
+   - Integration destination
+   - Anonymization status confirmation
+   - QA status confirmation (if applicable)
+
+2. **Upload** — Files are transferred to the configured destination (SFTP, cloud storage, etc.) with real-time progress tracking
+
+3. **Success** — A confirmation screen displays transfer details and provides the option to submit another patient dataset
+
+{/* TODO: Add screenshot of submission success screen */}
+
+## Monitoring Submission Status
+
+After submission, track contribution completion from the trial homepage:
+
+1. Navigate to the trial in AitriumOS
+2. View the **Scheduled Contributions** table for real-time status per patient and event
+
+Contribution statuses progress through:
+- **Pending Dates** — Waiting for anchor dates (e.g., randomization date not yet set)
+- **Scheduled** — Dates calculated, awaiting data submission
+- **In Progress** — Submission started
+- **Completed** — Data successfully submitted
+- **Overdue** — Past the collection window end date
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Prepare Your Data">
+    - Ensure all trial-required DICOM data is available in a single directory for submission
+    - Verify that supplementary non-DICOM files have been pseudonymized
+    - Confirm that DICOM images do not contain burned-in pixels with personally identifiable information
+  </Accordion>
+
+  <Accordion title="Configure Patients Early">
+    - Set randomization dates and regimen start dates promptly after enrollment
+    - This ensures scheduled contributions are generated with correct due dates
+    - Review the Scheduled Contributions table to confirm expected events appear
+  </Accordion>
+
+  <Accordion title="Review QA Results Carefully">
+    - Address any unacceptable deviations (red indicators) before acknowledging
+    - Contact the trial coordinator if you are unsure whether a variation is acceptable
+    - Use manual entry to supplement metrics the system could not extract automatically
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting Common Issues
+
+### Dataset Analysis Failures
+If dataset analysis fails:
+- Check the Data Errors tab for details — the DICOM data may be corrupted
+- Verify all trial-required DICOM data and series are present in the selected directory
+- Ensure the directory is accessible and not locked by another application
+
+### RT Structure Standardization Issues
+For RT structure mapping problems:
+- Confirm RTSTRUCT files are properly linked to their image series
+- Check that structure names can be mapped to the trial's required nomenclature
+- Use the searchable dropdown to manually assign mappings for unrecognized names
+
+### De-identification Errors
+If de-identification fails:
+- Check available disk space — the process creates anonymized copies of all files
+- Verify file permissions on the source directory
+- Use the **Retry** button to attempt again, or **Select New Directory** to start over
+
+### QA Metric Extraction Issues
+If QA facts cannot be extracted:
+- Verify that both RTSTRUCT and RTDOSE files are present and properly linked
+- Check that structure names have been correctly standardized in the previous step
+- Use manual entry to provide metrics that could not be computed automatically
+
+### Upload Errors
+If data transfer fails:
+- Verify your internet connection stability
+- Check that the trial's integration is properly configured (contact your trial administrator)
+- Ensure you have proper trial upload permissions
+- Contact support if issues persist
+
+## Need Help?
+
+If you encounter any issues during the submission process:
+- Review the error messages carefully for specific guidance
+- Consult the trial-specific requirements documentation
+- Contact support at [support@aitriumos.com](mailto:support@aitriumos.com)
+- Include your trial ID and patient ID when reporting issues
