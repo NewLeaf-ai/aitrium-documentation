@@ -1,17 +1,17 @@
 ---
 title: "RTQA Data Submission"
-description: "Step-by-step guide for submitting patient data using the RTQA submission workflow in AitriumOS, including regimen setup, scheduled contributions, and QA evaluation."
+description: "Step-by-step guide for submitting patient data using the RTQA submission workflow in AitriumOS, including regimen setup, the trial data submission schedule, and QA evaluation."
 ---
 
 ## Overview
 
 <Info>
-  **Is this the right guide for your trial?** Open your trial in AitriumOS and look at its page. If you see a **Scheduled Contributions** table and are asked to enter each patient's treatment regimen, you are in the right place. If instead you see a checklist of required datasets for each Trial Patient ID, follow [Basic Data Submission](/aitrium-os/no-protocol-submissions) instead.
+  **Is this the right guide for your trial?** Open your trial in AitriumOS and look at its page. If you see a **Trial Data Submission Schedule** with a **Patient Submission Queue** showing each patient's study arm and regimens, you are in the right place. If instead you see **Trial Submission Events** and a **Submit a Patient Dataset** table, follow [Basic Data Submission](/aitrium-os/no-protocol-submissions) instead.
 </Info>
 
-RTQA trials arrive in AitriumOS pre-configured with study arms, regimens, data collection schedules, and QA policies. The submission process is guided — each patient's required contributions are scheduled automatically based on the trial's configuration.
+RTQA trials arrive in AitriumOS pre-configured with study arms, regimens, data collection schedules, and QA policies. The submission process is guided — each patient's required data submissions are scheduled automatically based on the trial's configuration.
 
-This guide covers the complete workflow: configuring a patient's treatment regimen, reviewing scheduled contributions, and submitting data through the five-step submission flow.
+This guide covers the complete workflow: configuring a patient's treatment regimen, reviewing the trial data submission schedule, and submitting data through the five-step submission flow.
 
 {/* TODO: Add Arcade walkthrough embed for protocol submission flow */}
 
@@ -54,14 +54,14 @@ The modal presents three required fields:
   Regimens already assigned to the patient are disabled in the dropdown to prevent duplicates.
 </Note>
 
-After saving, the system automatically generates **Scheduled Contributions** based on the protocol's Data Collection Events, anchored to the patient's dates (randomization, regimen start, etc.).
+After saving, the system automatically schedules the patient's data submissions based on the trial's data collection events, anchored to the patient's dates (randomization, regimen start, etc.).
 
-## Submit Scheduled Contributions
+## Submit Scheduled Datasets
 
-The **Scheduled Contributions** table displays all pending data submissions for the trial:
+The **Patient Submission Queue** in the **Trial Data Submission Schedule** displays all pending data submissions for the trial:
 
-- **Site-level contributions** appear at the top of the table
-- **Patient-level contributions** are grouped by patient below
+- **Site-level submissions** appear at the top of the queue
+- **Patient-level submissions** are grouped by patient below
 
 Each row shows:
 - **Status badge** — OVERDUE, SCHEDULED, or COMPLETED
@@ -71,7 +71,7 @@ Each row shows:
 
 <img src="/images/trial_submissions/patient_schedules.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
 
-To begin a submission, click **Submit** on the desired contribution row. This opens the guided submission flow.
+To begin a submission, click **Submit** on the desired row in the queue. This opens the guided submission flow.
 
 ## Submission Flow
 
@@ -165,26 +165,26 @@ The final step uploads the processed dataset to the trial's configured destinati
 
 ## Monitoring Submission Status
 
-After submission, track contribution completion from the trial homepage:
+After submission, track completion from the trial homepage:
 
 1. Navigate to the trial in AitriumOS
-2. View the **Scheduled Contributions** table for real-time status per patient and event
+2. View the **Patient Submission Queue** for real-time status per patient and event
 
-Contribution statuses progress through:
+Submission statuses progress through:
 - **Pending Dates** — Waiting for anchor dates (e.g., randomization date not yet set)
 - **Scheduled** — Dates calculated, awaiting data submission
 - **In Progress** — Submission started
 - **Completed** — Data successfully submitted
 - **Overdue** — Past the collection window end date
 
-## Resubmitting a Contribution
+## Resubmitting a Dataset
 
-A contribution may need to be repeated — for example, when a dataset was incomplete, an upload failed partway through, or the trial team requests a corrected dataset.
+A submission may need to be repeated — for example, when a dataset was incomplete, an upload failed partway through, or the trial team requests a corrected dataset.
 
-1. Navigate to the trial in AitriumOS and locate the patient's event in the **Scheduled Contributions** table.
-2. The contribution's action button reflects what is needed:
+1. Navigate to the trial in AitriumOS and locate the patient's event in the **Patient Submission Queue**.
+2. The submission's action button reflects what is needed:
    - **Complete Required Items** — the dataset is missing required items; provide them to finish the original submission.
-   - **Resubmit Dataset** — the contribution should be submitted again; selecting it restarts the submission flow for that event.
+   - **Re-submit** — the dataset should be submitted again; selecting it restarts the submission flow for that event.
 3. Prepare the corrected dataset and proceed through the same analysis, standardization, de-identification, QA evaluation, and transfer steps as the original submission.
 
 A resubmission replaces the previous submission for that event in the trial's review workflow; earlier submissions remain recorded for traceability.
@@ -200,8 +200,8 @@ A resubmission replaces the previous submission for that event in the trial's re
 
   <Accordion title="Configure Patients Early">
     - Set randomization dates and regimen start dates promptly after enrollment
-    - This ensures scheduled contributions are generated with correct due dates
-    - Review the Scheduled Contributions table to confirm expected events appear
+    - This ensures scheduled submissions are generated with correct due dates
+    - Review the Patient Submission Queue to confirm expected events appear
   </Accordion>
 
   <Accordion title="Review QA Results Carefully">
