@@ -9,6 +9,28 @@ Welcome to Aitrium. We developed AitriumOS to streamline trial participation for
 
 This document is intended to guide first-time users of AitriumOS through the initial set-up and installation.
 
+### Before You Begin
+
+Make sure the following are in place before installing AitriumOS. Reviewing these with your site's IT staff ahead of time avoids the most common first-day issues.
+
+**Your Aitrium account**
+- You need an Aitrium account invitation for your site. If you have not received one, contact your trial coordinator.
+- Verify you can sign in at [https://app.aitriumos.com](https://app.aitriumos.com) before installing the desktop application. The desktop app uses the same credentials (or your institution's single sign-on, if configured).
+
+**Workstation requirements**
+- Windows 10/11 (64-bit; a 32-bit version is available for older Windows releases) or macOS (Apple Silicon or Intel).
+- Permission to install desktop applications, or access to your IT staff to perform the installation.
+- Sufficient free disk space for staging patient datasets prior to upload — the submission process creates a de-identified copy of each dataset.
+
+**Network requirements**
+- Outbound HTTPS (port 443) access to `app.aitriumos.com` and Aitrium service endpoints.
+- For trials that transfer data over SFTP: outbound SFTP/SSH access from your workstation to the trial's transfer endpoint. Uploads are sent directly from your workstation, so your institution's firewall must permit this outbound connection. The transfer host and port appear in the trial's integration details in AitriumOS.
+- If your institution restricts outbound traffic, share this section with your IT/network team — upload failures at submission time are most often caused by blocked outbound SFTP.
+
+<Info>
+  Verify you can connect to your trial before your first submission is due, not on the day data is due. If uploads cannot connect, contact your IT team and [support@aitriumos.com](mailto:support@aitriumos.com).
+</Info>
+
 ### Installing AitriumOS
 
 <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
@@ -54,3 +76,9 @@ To install the update:
 - Click "Update Now" to start downloading the version
 - Once the download succeeds, the application will automatically close to apply the update 
 - After the update completes, the application will re-open.
+
+## Need Help?
+
+If you run into problems during set-up:
+- Contact support at [support@aitriumos.com](mailto:support@aitriumos.com)
+- Include your operating system version and, for connection issues, the error message shown in the app

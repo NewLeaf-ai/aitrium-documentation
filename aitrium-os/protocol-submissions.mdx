@@ -173,6 +173,18 @@ Contribution statuses progress through:
 - **Completed** — Data successfully submitted
 - **Overdue** — Past the collection window end date
 
+## Resubmitting a Contribution
+
+A contribution may need to be repeated — for example, when a dataset was incomplete, an upload failed partway through, or the trial team requests a corrected dataset.
+
+1. Navigate to the trial in AitriumOS and locate the patient's event in the **Scheduled Contributions** table.
+2. The contribution's action button reflects what is needed:
+   - **Complete Required Items** — the dataset is missing required items; provide them to finish the original submission.
+   - **Resubmit Dataset** — the contribution should be submitted again; selecting it restarts the submission flow for that event.
+3. Prepare the corrected dataset and proceed through the same analysis, standardization, de-identification, QA evaluation, and transfer steps as the original submission.
+
+A resubmission replaces the previous submission for that event in the trial's review workflow; earlier submissions remain recorded for traceability.
+
 ## Best Practices
 
 <AccordionGroup>
@@ -224,6 +236,7 @@ If QA facts cannot be extracted:
 ### Upload Errors
 If data transfer fails:
 - Verify your internet connection stability
+- Confirm your institution's firewall permits the outbound transfer connection — see [Before You Begin](/aitrium-os/overview#before-you-begin)
 - Check that the trial's integration is properly configured (contact your trial administrator)
 - Ensure you have proper trial upload permissions
 - Contact support if issues persist
