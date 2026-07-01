@@ -26,7 +26,7 @@ Most hospital networks restrict which applications can be installed and which ne
   **For IT staff — requirements for AitriumOS (clinical trial data submission application):**
 
   - **Installation** — AitriumOS is a desktop application for Windows 10/11 (64-bit; 32-bit available for older releases) or macOS (Apple Silicon or Intel). The user needs it installed on their workstation.
-  - **Disk space** — the application creates a de-identified working copy of each patient imaging dataset before upload, so allow free space accordingly.
+  - **Disk space** — during a submission, the application creates a temporary de-identified working copy of the patient imaging dataset, so the workstation needs transient free space roughly equal to the dataset being submitted. Working copies are deleted automatically when the submission completes or is cancelled (leftovers from interrupted sessions are removed the next time the application starts), so storage utilization does not accumulate over time.
   - **Web access** — outbound HTTPS (port 443) from the workstation to `app.aitriumos.com` and Aitrium service endpoints.
   - **Data upload** — for trials that transfer data over SFTP, outbound SFTP/SSH from the workstation to the trial's transfer endpoint. Uploads are sent directly from the workstation, so outbound firewall rules must permit this connection. The transfer host and port are shown in the trial's integration details inside AitriumOS.
 </Note>
