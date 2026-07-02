@@ -50,12 +50,17 @@ This critical step protects patient privacy by:
 - Analyzing all DICOM headers for potentially identifying information.
 - Applying the clinical trial's de-identification policy to the DICOM file metadata.
 
+This step will run automatically and only require action if there is a failure.
+
+<Danger>
+  **Aitrium currently does not remove burned-in pixels from DICOM image data or de-identify non-DICOM files. Please ensure images and other supplementary files are anonymized prior to submission.**
+</Danger>
+
 ### 4. Final Review
 
 Before submission, the user can:
-- Confirm de-identification completeness
-- Review validation results
-- Approve data for submission
+- Review dataset completeness.
+- Approve data for submission.
 
 ### 5. Upload to Trial
 The final step sends:

@@ -1,0 +1,73 @@
+---
+title: "Data Flows & Residency"
+description: "Network destinations, ports, firewall allowlist, where patient data lives, and how transfer credentials are handled."
+---
+
+All communication between AitriumOS and Aitrium/Google cloud services is **HTTPS/TLS over port 443**, always initiated outbound by the application. The only non-443 traffic is the transfer of the prepared dataset to the investigator's endpoint (typically SFTP over TCP 22), whose destination is defined by the investigator — not by your Site.
+
+## Submission sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant TM as Trial Manager
+    participant AC as Aitrium Cloud
+    participant SU as Site User
+    participant OS as AitriumOS (local)
+    participant INV as Investigator destination
+
+    TM->>AC: Create trial with policies (de-identification, protocol, sites)
+    SU->>AC: Sign in; request active trials
+    AC-->>SU: Return authorized trials
+    SU->>AC: Select trial; request policies
+    AC-->>SU: Return trial policies
+    SU->>OS: Select local patient dataset
+    Note over OS: Validate, standardize, and<br/>de-identify — all on the workstation
+    OS->>INV: Transfer standardized, de-identified dataset (direct)
+    OS->>AC: Send sanitized QA results & dataset structure (no imaging)
+    AC->>TM: Notify of new submission
+```
+
+<Card title="Interactive version" icon="external-link" href="https://app.eraser.io/workspace/2rQ6SX5mAbjJC7Q1xAKd?origin=share">
+  Open the full, interactive submission data-flow diagram.
+</Card>
+
+## Firewall allowlist
+
+Permit outbound **HTTPS (TCP 443)** to the following destinations:
+
+| Destination | Purpose |
+|---|---|
+| `api.aitriumos.com` | Core Aitrium API (trials, policies, dataset records) |
+| `app.aitriumos.com` | Web sign-in and installer downloads |
+| `*.googleapis.com`, `*.firebaseapp.com`, `oauth2.googleapis.com` | User authentication (Google Firebase Authentication) |
+| `storage.googleapis.com` | Application updates (and any Google Cloud Storage transfer you configure) |
+
+<Note>
+  AitriumOS also calls additional Aitrium-operated services on Google Cloud (HTTPS/443) — for example, audit logging and radiotherapy plan standardization. The exact endpoints for your release are provided to your IT team on request: [support@aitriumos.com](mailto:support@aitriumos.com).
+</Note>
+
+### Transfer to the investigator
+
+| Destination | Purpose | Notes |
+|---|---|---|
+| Investigator's SFTP/FTP endpoint | Transfer of the prepared dataset | Host, port (typically TCP 22), and credentials are set by the investigator/sponsor organization — not entered or stored by your Site. The transfer connects directly from the workstation to the investigator and does not route through Aitrium. |
+
+<Info>
+  The transfer originates from the **workstation's own outbound IP address**. If the investigator's SFTP server restricts sources by IP, allow the workstation's egress IP — there is no fixed Aitrium relay address.
+</Info>
+
+## Data residency — where patient data lives
+
+- **Raw patient DICOM (pixel data) is processed entirely on the local workstation and is never uploaded to Aitrium's cloud.**
+- Patient files leave the workstation **only** via the transfer to the investigator's destination, connecting directly from the workstation. No patient imaging is routed through Aitrium-controlled infrastructure.
+- Aitrium's cloud stores only non-sensitive metadata and metrics that AitriumOS extracts or computes from the local dataset — never the original images:
+  - **Dataset structure / metadata** — the DICOM hierarchy (studies, series, modalities, instance counts) and references to supplementary files, used to confirm a submission is complete against the protocol.
+  - **Derived quality metrics** — for radiotherapy, dose-volume-histogram curves (computed summaries, not original images).
+  - **Platform configuration** — trial definitions, policies, automations, and integration settings.
+
+In short: structure and derived metrics go to Aitrium; the imaging itself goes only to the investigator's destination.
+
+## Transfer credentials
+
+Your Site does **not** enter, hold, or manage the credentials used to transfer data to the investigator. The recipient (investigator/sponsor) organization configures and permits the transfer integration at the user level. Credentials are stored **encrypted at rest using Google Cloud KMS keys** — scoped to the owning recipient organization and to each participating site — and those keys never leave Aitrium's servers. When an authorized Site user performs a transfer, Aitrium decrypts the credentials server-side and re-encrypts them for delivery using a **short-lived session key tied to that user's authenticated session**, transmitted over TLS. AitriumOS then decrypts them **in memory**, uses them only for that transfer, and **discards them** — they are never written to the workstation's local storage. Which users may transfer data for a given trial is controlled by a per-user permission (see [Access management](/security/aitrium-os/access-management)).

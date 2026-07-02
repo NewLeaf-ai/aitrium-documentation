@@ -1,0 +1,41 @@
+---
+title: "Access Management"
+description: "Organization roles, trial-level permissioning, and authentication."
+---
+
+Access is governed by the Aitrium platform and is **self-service within your organization** — you do not depend on Aitrium to add or remove your own users (Aitrium assists only with initial organization setup and your first administrator). For step-by-step administration, see [User Management](/aitrium-admin/user-management).
+
+## Organization roles
+
+| Role | Scope |
+|---|---|
+| **Admin** | Organization-wide access, including administration: inviting and managing users, managing Sites, and granting users access to authorized trials. |
+| **User** | Operational access limited to an **assigned Site** (and to the trials that user is authorized for — see below). |
+
+An **Admin** invites users by email. Invitations are valid for a limited period and move from **Pending** to **Accepted** or **Expired**; Admins can resend or revoke invitations and reassign a user's role or Site. A **User invitation requires a Site assignment** — that user can only access data and workflows for their assigned Site.
+
+<Note>
+  The credentials used to transfer data to an investigator are configured by the investigator/sponsor organization, not by your Site's Admin. See [Transfer credentials](/security/aitrium-os/data-flows#transfer-credentials).
+</Note>
+
+## Trial-level permissioning
+
+Access to a trial is scoped, not global. A user only ever sees the trials they are explicitly authorized for:
+
+<Steps>
+  <Step title="User → Site">
+    A user is associated with one or more Sites in your organization (set at invitation).
+  </Step>
+  <Step title="Site → Trial">
+    The investigator determines which Sites participate in a given trial. A Site that is not participating in a trial is invisible to that Site's users.
+  </Step>
+  <Step title="User → Trial">
+    For a participating Site, a user is granted access to the specific trial, with fine-grained rights — for example, **viewing** a trial versus **transferring/submitting data** to it.
+  </Step>
+</Steps>
+
+In the application, AitriumOS only ever displays the trials, policies, and actions the signed-in user is authorized for. Authorization is **enforced on the server for every request** — the application cannot surface or act on anything the user has not been granted.
+
+## Authentication
+
+Users sign in individually through Aitrium's managed identity service. The application presents the signed-in user's token on every request, and the server authorizes access according to the rules above.

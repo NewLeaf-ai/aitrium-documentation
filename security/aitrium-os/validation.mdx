@@ -1,0 +1,45 @@
+---
+title: "Build Integrity & Validation"
+description: "Code signing, integrity hashes, multi-engine scan results, endpoint-protection guidance, and privileges."
+---
+
+AitriumOS installers are code-signed and independently verifiable. This page documents the integrity controls and the validation performed on a release.
+
+## Endpoint protection (EDR / antivirus) compatibility
+
+There are no known incompatibilities with endpoint-protection (EDR / antivirus) products. AitriumOS is a code-signed application that runs in the user's context. As with many clinical/imaging desktop tools, an endpoint-protection product may apply heuristics to a few legitimate behaviors; if needed, the cleanest approach is to allow the application by:
+
+- **Code-signing publisher** — the installers are signed via **Microsoft Trusted Signing**; the publisher is shown in the file's **Properties → Digital Signatures** tab.
+- **Install path** — by default, the per-machine (MSI) installer installs under `C:\Program Files\`, and the per-user (NSIS) installer installs under `%LOCALAPPDATA%` (e.g., `%LOCALAPPDATA%\AitriumOS\`).
+- **Application data directory** — `%APPDATA%\newleaf.ai\` (Windows *roaming* app-data; this is the runtime data folder, distinct from the install path above).
+
+For awareness, behaviors an EDR may flag heuristically: the bundled imaging helper executables, the spawning of these helpers as child processes, and the in-app updater downloading and launching a signed update.
+
+<Note>
+  Endpoint-protection results are policy-dependent, so a behavioral pass in your own EDR environment is the authoritative test. Aitrium can support a validation pass on request.
+</Note>
+
+## Privileges & OS compatibility
+
+- **No local administrator privileges** are required for normal operation under either installer; the per-user (NSIS) installer also installs without admin rights.
+- **Windows 11** (64-bit / x64) is supported; WebView2 is included with Windows 11.
+
+## Validation performed
+
+The following checks are run against each release. Results below are for **v2.1.2 (x64)**, recorded 2026-06-03.
+
+| Validation | Result |
+|---|---|
+| **Authenticode code-signature verification** (both installers) | ✅ Valid — signature verifies, chains to the Microsoft Identity Verification Root CA 2020, and is RFC-3161 timestamped. Confirms the binaries are signed by the stated publisher and unaltered since signing. |
+| **Cryptographic integrity (hash manifest)** | ✅ Recorded — see below; lets your team confirm a downloaded file matches the published build. |
+| **Multi-engine static scan** (75 engines, incl. major EDR/AV vendors, via VirusTotal) | ✅ Clean — 0 detections on both installers (0 malicious, 0 suspicious). |
+| **EDR behavioral validation** (install + full submission workflow on an EDR-enrolled Windows 11 endpoint) | Available on request — run against an evaluation tenant or supported under your own policy. |
+
+### v2.1.2 hash manifest (SHA-256)
+
+| Installer | SHA-256 |
+|---|---|
+| `AitriumOS_2.1.2_x64_en-US.msi` (MSI) | `754791d3d3d58575ce96addf86ca13fa440b876bce77d9458aa0ee9ca6f4e0c8` |
+
+**Independent verification (VirusTotal, 0/75, scanned 2026-06-03):**
+- [MSI installer report](https://www.virustotal.com/gui/file/754791d3d3d58575ce96addf86ca13fa440b876bce77d9458aa0ee9ca6f4e0c8)

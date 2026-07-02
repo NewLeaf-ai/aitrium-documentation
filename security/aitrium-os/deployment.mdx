@@ -1,0 +1,34 @@
+---
+title: "Deployment & Updates"
+description: "System requirements, installer options, and how AitriumOS updates."
+---
+
+For installation, sign-in, and update walkthroughs with screenshots, see [Getting started with AitriumOS](/aitrium-os/overview). This page summarizes the IT-relevant facts.
+
+## System requirements
+
+- **Windows 11** (and Windows 10), **64-bit (x64)**.
+- Microsoft Edge **WebView2** runtime — included with Windows 11; otherwise provisioned automatically, per-user, during setup.
+- **Normal operation requires no local administrator rights** under either installer below.
+
+## Installer options
+
+| Installer | Scope | Administrator rights | Best for |
+|---|---|---|---|
+| **MSI** (default) | Per-machine | Typically required to **install** (e.g., when deployed centrally by IT); the application still **runs** in the user's context with no elevation. | Centrally-managed / IT-deployed fleets. |
+| **NSIS** | Per-user | **None** — installs into the user's profile and runs entirely in the user's context. | Self-service install where users cannot elevate. |
+
+<Tip>
+  To satisfy a strict "no administrator privileges" requirement for self-installation, use the per-user NSIS installer. Aitrium can also set NSIS as the default for your sites — contact [support@aitriumos.com](mailto:support@aitriumos.com).
+</Tip>
+
+Download the current release after signing in at [app.aitriumos.com](https://app.aitriumos.com) → **Downloads**. (Specific version binaries and their hashes can be provided for change-control purposes — see [Build integrity & validation](/security/aitrium-os/validation).)
+
+## Updates
+
+- **Integrity.** Every update package is **cryptographically signed and verified before it is applied**; a package that fails verification is rejected. Windows binaries are code-signed; macOS binaries are signed and notarized.
+- **Distribution.** Updates are delivered over HTTPS from Google Cloud Storage.
+- **Delivery depends on how the application was installed:**
+  - **Per-user (NSIS):** the user is notified in-app when a new version is available and applies the update in their own context.
+  - **Per-machine (MSI), centrally deployed:** version management is handled by your IT team through your deployment tooling.
+- **Scope.** Updates deliver fixes, improvements, and features; they do not change the security posture described in this section.
