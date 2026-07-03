@@ -1,15 +1,15 @@
 ---
-title: "Data Submissions (No Protocol)"
-description: "Step-by-step guide for submitting clinical trial data without a trial protocol configuration."
+title: "Basic Data Submission"
+description: "Step-by-step guide for submitting clinical trial data using the basic submission workflow in AitriumOS."
 ---
 
 ## Overview
 
 <Info>
-  This guide covers the non-protocol submission workflow. If your trial was set up with a protocol in Trial Accelerator, see [Clinical Trial Data Submissions](/aitrium-os/protocol-submissions) instead.
+  **Is this the right guide for your trial?** Open your trial in AitriumOS and look at its page. If you see **Trial Submission Events** and a **Submit a Patient Dataset** table listing each Trial Patient ID, you are in the right place. If instead you see a **Trial Data Submission Schedule** with a **Patient Submission Queue** showing each patient's study arm and regimens, follow [RTQA Data Submission](/aitrium-os/protocol-submissions) instead.
 </Info>
 
-This guide walks through the submission process for clinical trial data using AitriumOS when a trial does not have a protocol configuration. The submission process ensures your data meets all trial requirements while maintaining patient privacy through standardization and de-identification.
+This guide walks through submitting clinical trial data with AitriumOS for trials that use a per-patient dataset checklist. The submission process ensures your data meets all trial requirements while maintaining patient privacy through standardization and de-identification.
 
 ## Step-by-Step Walkthrough
 
@@ -50,12 +50,17 @@ This critical step protects patient privacy by:
 - Analyzing all DICOM headers for potentially identifying information.
 - Applying the clinical trial's de-identification policy to the DICOM file metadata.
 
+This step will run automatically and only require action if there is a failure.
+
+<Danger>
+  **Aitrium currently does not remove burned-in pixels from DICOM image data or de-identify non-DICOM files. Please ensure images and other supplementary files are anonymized prior to submission.**
+</Danger>
+
 ### 4. Final Review
 
 Before submission, the user can:
-- Confirm de-identification completeness
-- Review validation results
-- Approve data for submission
+- Review dataset completeness.
+- Approve data for submission.
 
 ### 5. Upload to Trial
 The final step sends:
@@ -69,6 +74,18 @@ After submission, you can track the status of each patient dataset:
 
 1. Navigate to the trial homepage in AitriumOS
 2. View dataset completion status for each Trial Patient ID.
+
+## Resubmitting a Dataset
+
+A submission may need to be repeated — for example, when a dataset was incomplete, an upload failed partway through, or the trial team requests a corrected dataset.
+
+1. Navigate to the trial homepage in AitriumOS and locate the patient in the **Submit a Patient Dataset** table.
+2. The dataset's action button reflects what is needed:
+   - **Complete Required Items** — the dataset is missing required items; provide them to finish the original submission.
+   - **Resubmit Dataset** — the dataset should be submitted again; selecting it restarts the submission flow for that patient.
+3. Prepare the corrected dataset and proceed through the same validation, standardization, de-identification, and review steps as the original submission.
+
+A resubmission replaces the previous submission for that patient in the trial's review workflow; earlier submissions remain recorded for traceability.
 
 ## Best Practices
 
@@ -100,6 +117,7 @@ For RT structure problems:
 ### Upload Errors
 If uploads fail:
 - Verify your internet connection stability
+- Confirm your institution's firewall permits the outbound transfer connection — see [Before You Begin](/aitrium-os/overview#before-you-begin)
 - Check available disk space
 - Ensure you have proper trial permissions
 - Contact support if issues persist

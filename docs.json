@@ -13,6 +13,14 @@
   "icons": {
     "library": "lucide"
   },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
+  },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
@@ -31,14 +39,8 @@
             "icon": "square-terminal",
             "pages": [
               "aitrium-os/overview",
+              "aitrium-os/no-protocol-submissions",
               "aitrium-os/protocol-submissions"
-            ]
-          },
-          {
-            "group": "AitriumOS (No Protocol)",
-            "hidden": true,
-            "pages": [
-              "aitrium-os/no-protocol-submissions"
             ]
           },
           {
@@ -59,6 +61,43 @@
               "aitrium-admin/network-management",
               "aitrium-admin/audit-logging",
               "aitrium-admin/integrations"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Training",
+        "icon": "graduation-cap",
+        "groups": [
+          {
+            "group": "Data Submission Training",
+            "pages": [
+              "training/basic-submission",
+              "training/rtqa-submission"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Trust & Security",
+        "icon": "shield-check",
+        "groups": [
+          {
+            "group": "Trust & Security",
+            "pages": [
+              "security/overview"
+            ]
+          },
+          {
+            "group": "AitriumOS · Desktop App",
+            "icon": "square-terminal",
+            "pages": [
+              "security/aitrium-os/overview",
+              "security/aitrium-os/architecture",
+              "security/aitrium-os/data-flows",
+              "security/aitrium-os/access-management",
+              "security/aitrium-os/deployment",
+              "security/aitrium-os/validation"
             ]
           }
         ]

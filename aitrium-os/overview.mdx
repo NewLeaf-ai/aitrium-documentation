@@ -9,6 +9,32 @@ Welcome to Aitrium. We developed AitriumOS to streamline trial participation for
 
 This document is intended to guide first-time users of AitriumOS through the initial set-up and installation.
 
+### Before You Begin
+
+There are two quick checks before installing AitriumOS — one you can do yourself, and one for your site's IT team.
+
+**1. Check that you can sign in**
+
+- You should have received an Aitrium account invitation for your site. If you have not, contact your trial coordinator.
+- Verify you can sign in at [https://app.aitriumos.com](https://app.aitriumos.com). The desktop application uses this same sign-in.
+
+**2. Forward the requirements below to your IT team**
+
+Most hospital networks restrict which applications can be installed and which network connections are allowed. You do not need to understand or check these items yourself — send this page to your IT team and ask them to confirm each item for the computer you will use.
+
+<Note>
+  **For IT staff — requirements for AitriumOS (clinical trial data submission application):**
+
+  - **Installation** — AitriumOS is a desktop application for Windows 10/11 (64-bit; 32-bit available for older releases) or macOS (Apple Silicon or Intel). The user needs it installed on their workstation.
+  - **Disk space** — during a submission, the application creates a temporary de-identified working copy of the patient imaging dataset, so the workstation needs transient free space roughly equal to the dataset being submitted. Working copies are deleted automatically when the submission completes or is cancelled (leftovers from interrupted sessions are removed the next time the application starts), so storage utilization does not accumulate over time.
+  - **Web access** — outbound HTTPS (port 443) from the workstation to `app.aitriumos.com` and Aitrium service endpoints.
+  - **Data upload** — for trials that transfer data over SFTP, outbound SFTP/SSH from the workstation to the trial's transfer endpoint. Uploads are sent directly from the workstation, so outbound firewall rules must permit this connection. The transfer host and port are shown in the trial's integration details inside AitriumOS.
+</Note>
+
+<Info>
+  Once installed, verify you can connect to your trial well before your first submission is due — not on the day data is due. If uploads cannot connect, ask your IT team to re-check the **Data upload** item above, and contact [support@aitriumos.com](mailto:support@aitriumos.com) if the problem persists.
+</Info>
+
 ### Installing AitriumOS
 
 <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
@@ -54,3 +80,9 @@ To install the update:
 - Click "Update Now" to start downloading the version
 - Once the download succeeds, the application will automatically close to apply the update 
 - After the update completes, the application will re-open.
+
+## Need Help?
+
+If you run into problems during set-up:
+- Contact support at [support@aitriumos.com](mailto:support@aitriumos.com)
+- Include your operating system version and, for connection issues, the error message shown in the app

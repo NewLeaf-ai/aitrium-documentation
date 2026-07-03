@@ -1,0 +1,63 @@
+---
+title: "Architecture"
+description: "The local and cloud components of AitriumOS, and how they fit together."
+---
+
+AitriumOS is a native desktop application. The user interface runs in the operating system's WebView; the application core runs as a compiled native process. It is an outbound client — there is no customer-hosted server, database, or inbound network service.
+
+## On the workstation
+
+- A single native desktop application ("AitriumOS").
+- A user-interface layer rendered in the Microsoft Edge **WebView2** runtime (included with Windows 11).
+- A small local database and working folders in the per-user application-data directory, holding application state and in-progress dataset processing — not a copy of your imaging archive.
+- Bundled helper components for imaging tasks (e.g., DICOM de-identification and dose-volume-histogram computation) that run as ordinary, user-level processes and require no special privileges.
+
+## In Aitrium's cloud (managed by Aitrium)
+
+You install nothing server-side. The cloud platform comprises:
+
+- An authenticated API the application calls for trial definitions, policies, and dataset-completeness records.
+- A managed database and object storage (platform data and application-update artifacts).
+- A managed identity service for sign-in.
+
+<Note>
+  There is no customer-hosted database, no inbound network service, and nothing to operate on your side beyond the desktop application itself.
+</Note>
+
+## System diagram
+
+<a href="https://app.eraser.io/workspace/sBxvYQgwaUKl1rtLxLY0?figure=LK1SRZoqtHYv5bX9im85S">View on Eraser<br /><img src="https://app.eraser.io/workspace/sBxvYQgwaUKl1rtLxLY0/preview?figure=LK1SRZoqtHYv5bX9im85S&type=embed" /></a>
+
+```mermaid
+flowchart TB
+  subgraph CLOUD["Aitrium Cloud — managed by Aitrium"]
+    API["Aitrium API"]
+    DB[("Managed database")]
+    IDP["Identity service"]
+    STORE[("Object storage<br/>(updates, platform data)")]
+    API <--> DB
+    API <--> IDP
+    API <--> STORE
+  end
+
+  subgraph WS["Site workstation — inside your network"]
+    subgraph OS["AitriumOS desktop application"]
+      UI["WebView2 user interface"]
+      CORE["Native application core"]
+      HELP["De-identification &amp; QA helpers<br/>(user-level processes)"]
+      LOCAL[("Local store<br/>app state &amp; operation logs")]
+      CORE --- UI
+      CORE --- HELP
+      CORE --- LOCAL
+    end
+  end
+
+  INV[["Investigator destination<br/>SFTP / FTP"]]
+
+  OS -- "HTTPS 443 (outbound)" --> API
+  OS -- "Prepared dataset — direct, not via Aitrium" --> INV
+```
+
+<Card title="Interactive version" icon="external-link" href="https://app.eraser.io/workspace/sBxvYQgwaUKl1rtLxLY0?origin=share">
+  Open the full, interactive system architecture diagram.
+</Card>

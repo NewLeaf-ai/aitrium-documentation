@@ -1,0 +1,51 @@
+---
+title: "AitriumOS Security Overview"
+description: "Security reference for AitriumOS — the desktop application installed at Sites — for IT and Information Security teams."
+---
+
+AitriumOS is the desktop application that **Sites** install on a workstation inside their own network. It receives a clinical trial's data-handling policy and runs validation, standardization, and **de-identification** on the Site's *local* patient DICOM data so the dataset conforms to that policy — before the prepared dataset is transferred directly to the investigator.
+
+<Note>
+  AitriumOS is one component of the broader Aitrium platform. This section is the IT/security reference for the **AitriumOS desktop application** specifically; additional platform areas are documented elsewhere in this Trust &amp; Security center over time.
+</Note>
+
+## Security posture at a glance
+
+<CardGroup cols={2}>
+  <Card title="Patient data stays local" icon="hard-drive">
+    Raw patient imaging is processed on the workstation and is never uploaded to Aitrium's cloud. It leaves only via a transfer to the investigator's destination.
+  </Card>
+  <Card title="Outbound client only" icon="arrow-up-right">
+    The application initiates outbound HTTPS connections; nothing connects to the workstation. There is no inbound listener and no server software to host.
+  </Card>
+  <Card title="No administrator rights" icon="user-check">
+    Normal operation requires no elevation, and a per-user installer installs without administrator rights.
+  </Card>
+  <Card title="Signed & scanned builds" icon="shield-check">
+    Installers are code-signed via Microsoft Trusted Signing and verified clean by multi-engine scanning; updates are cryptographically verified before they apply.
+  </Card>
+</CardGroup>
+
+## In this section
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/security/aitrium-os/architecture">
+    Local and cloud components, with system and data-flow diagrams.
+  </Card>
+  <Card title="Data flows & residency" icon="route" href="/security/aitrium-os/data-flows">
+    Network destinations, ports, firewall allowlist, and where patient data lives.
+  </Card>
+  <Card title="Access management" icon="users" href="/security/aitrium-os/access-management">
+    Roles, trial-level permissioning, and authentication.
+  </Card>
+  <Card title="Deployment & updates" icon="download" href="/security/aitrium-os/deployment">
+    System requirements, installers, and the update mechanism.
+  </Card>
+  <Card title="Build integrity & validation" icon="badge-check" href="/security/aitrium-os/validation">
+    Code signing, hashes, multi-engine scan results, and endpoint-protection guidance.
+  </Card>
+</CardGroup>
+
+<Note>
+  For a detailed IT/security review or to request environment-specific information (e.g., a complete firewall endpoint list), contact [support@aitriumos.com](mailto:support@aitriumos.com).
+</Note>
