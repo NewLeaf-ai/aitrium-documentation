@@ -95,6 +95,7 @@
               "security/aitrium-os/overview",
               "security/aitrium-os/architecture",
               "security/aitrium-os/data-flows",
+              "security/aitrium-os/proxy-configuration",
               "security/aitrium-os/access-management",
               "security/aitrium-os/deployment",
               "security/aitrium-os/validation"
