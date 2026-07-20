@@ -1,0 +1,68 @@
+---
+title: "Corporate HTTP proxy"
+description: "Route AitriumOS outbound traffic through your organization's HTTP proxy instead of allowing direct egress through the firewall."
+---
+
+Many organizations require internet-bound traffic to route through a corporate proxy rather than egress directly through the firewall. AitriumOS supports this: its network traffic can be pointed at your proxy using the standard `HTTPS_PROXY` environment variable — no special build or in-application setting is required, and it works with the version already installed.
+
+This is an alternative to the direct [firewall allowlist](/security/aitrium-os/data-flows#firewall-allowlist). Use whichever matches your organization's policy — you do not need both.
+
+<Note>
+  AitriumOS makes two kinds of outbound connection. Interactive traffic (sign-in and web pages) follows the workstation's system proxy automatically. Background traffic (the application's API and data calls) follows the `HTTPS_PROXY` environment variable described below. Setting `HTTPS_PROXY` brings the background traffic in line with your proxy so the whole application works consistently.
+</Note>
+
+## Configure the proxy on Windows
+
+Set `HTTPS_PROXY` as a **system (machine-level)** environment variable so it applies to every user who signs into the workstation, then restart the machine so AitriumOS reads it on next launch.
+
+<Steps>
+  <Step title="Set the variable at the system level">
+    Deploy it with your standard tooling (Group Policy or Intune), or set it directly on the workstation:
+
+    - **System Properties** → *Advanced system settings* → *Environment Variables* → under **System variables**, add:
+
+    ```
+    HTTPS_PROXY = http://your-proxy-host:port
+    ```
+
+    - Or, from an **elevated** Command Prompt (`/M` sets it machine-wide):
+
+    ```
+    setx /M HTTPS_PROXY "http://your-proxy-host:port"
+    ```
+
+    Optionally also set `NO_PROXY = localhost,127.0.0.1` so AitriumOS's on-device components are never routed through the proxy.
+  </Step>
+  <Step title="Restart the workstation">
+    Windows caches the environment for running applications, so a reboot (or sign out and back in) is required for AitriumOS to pick up the new value. Because the value is stored in the registry, it persists across restarts — you do not need to set it again.
+  </Step>
+  <Step title="Confirm it works">
+    Open AitriumOS, sign in, and open a trial. Trial data (patients, integration status) should load. If it does, the application is routing through your proxy.
+  </Step>
+</Steps>
+
+<Note>
+  Set the variable at the **system** level, not per-user. A per-user variable applies only to the account that set it, which will fail on a shared clinical workstation used by multiple people.
+</Note>
+
+## macOS
+
+On macOS, prefer configuring the proxy in **System Settings → Network → Proxies**, which the application follows automatically. Environment variables set in a shell are not inherited by applications launched from Finder or the Dock, so the `HTTPS_PROXY` shell method is not reliable on macOS. If you need an explicit per-application proxy on macOS, contact [support@aitriumos.com](mailto:support@aitriumos.com).
+
+## Limitations to plan for
+
+<Warning>
+  **Proxies that require authentication (NTLM / Kerberos / Windows Integrated Authentication) are not supported.** If your proxy challenges connections for credentials, AitriumOS cannot complete the handshake. In that case, add a bypass rule that lets the workstation reach the [Aitrium destinations](/security/aitrium-os/data-flows#firewall-allowlist) directly. Contact [support@aitriumos.com](mailto:support@aitriumos.com) if you are unsure whether your proxy authenticates.
+</Warning>
+
+<Warning>
+  **Dataset transfer to the investigator does not use the HTTP proxy.** The transfer to the investigator's endpoint is SFTP over TCP 22 (SSH), which cannot traverse an HTTP proxy. This connection always requires a direct outbound firewall exception to the investigator's SFTP host — separate from the proxy configuration above. See [Data Flows](/security/aitrium-os/data-flows#transfer-to-the-investigator).
+</Warning>
+
+## Automatic proxy configuration (PAC / WPAD)
+
+If your network configures proxies through an automatic configuration script (PAC) or auto-discovery (WPAD), set `HTTPS_PROXY` to the proxy address the script would resolve to for Aitrium's destinations. If your environment cannot use a static proxy address, contact [support@aitriumos.com](mailto:support@aitriumos.com) with the details and we will advise.
+
+<Info>
+  Not sure which approach fits your network? Send your proxy details (address, whether it authenticates, and whether it uses a PAC/auto-config script) to [support@aitriumos.com](mailto:support@aitriumos.com) and we will confirm the right configuration.
+</Info>

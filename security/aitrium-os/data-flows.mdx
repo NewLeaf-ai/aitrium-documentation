@@ -47,6 +47,10 @@ Permit outbound **HTTPS (TCP 443)** to the following destinations:
   AitriumOS also calls additional Aitrium-operated services on Google Cloud (HTTPS/443) — for example, audit logging and radiotherapy plan standardization. The exact endpoints for your release are provided to your IT team on request: [support@aitriumos.com](mailto:support@aitriumos.com).
 </Note>
 
+<Tip>
+  Prefer to route this traffic through a corporate HTTP proxy instead of allowing direct egress? See [Corporate HTTP proxy](/security/aitrium-os/proxy-configuration).
+</Tip>
+
 ### Transfer to the investigator
 
 | Destination | Purpose | Notes |
