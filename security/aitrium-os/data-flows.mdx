@@ -36,12 +36,16 @@ sequenceDiagram
 
 Permit outbound **HTTPS (TCP 443)** to the following destinations:
 
-| Destination | Purpose |
-|---|---|
-| `api.aitriumos.com` | Core Aitrium API (trials, policies, dataset records) |
-| `app.aitriumos.com` | Web sign-in and installer downloads |
-| `*.googleapis.com`, `*.firebaseapp.com`, `oauth2.googleapis.com` | User authentication (Google Firebase Authentication) |
-| `storage.googleapis.com` | Application updates (and any Google Cloud Storage transfer you configure) |
+| Destination | Purpose | If blocked |
+|---|---|---|
+| `api.aitriumos.com` | Core Aitrium API (trials, policies, dataset records) | **Submissions blocked** — trials and patient data will not load |
+| `app.aitriumos.com` | Web sign-in and installer downloads | Sign-in and installer downloads blocked |
+| `*.googleapis.com`, `*.firebaseapp.com`, `oauth2.googleapis.com` | User authentication (Google Firebase Authentication) | **Sign-in blocked** |
+| `storage.googleapis.com` | Application updates (and any Google Cloud Storage transfer you configure) | App updates unavailable — submissions unaffected |
+
+<Note>
+  The most important address to allow is `api.aitriumos.com`: if it is blocked, users can sign in but trials and patient data will not load, and no data can be submitted. AitriumOS shows an in-app "Can't reach Aitrium" message in this state pointing the user to this guide. `storage.googleapis.com` only affects automatic app updates and never blocks a submission.
+</Note>
 
 <Note>
   AitriumOS also calls additional Aitrium-operated services on Google Cloud (HTTPS/443) — for example, audit logging and radiotherapy plan standardization. The exact endpoints for your release are provided to your IT team on request: [support@aitriumos.com](mailto:support@aitriumos.com).
