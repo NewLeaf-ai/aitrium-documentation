@@ -31,8 +31,30 @@ Most hospital networks restrict which applications can be installed and which ne
   - **Data upload** — for trials that transfer data over SFTP, outbound SFTP/SSH from the workstation to the trial's transfer endpoint. Uploads are sent directly from the workstation, so outbound firewall rules must permit this connection. The transfer host and port are shown in the trial's integration details inside AitriumOS.
 </Note>
 
+#### How you'll know: "Can't reach Aitrium"
+
+You do not need to test the network requirements yourself — AitriumOS checks its own connection every time it runs. **If you can sign in and don't see either of the warnings below, the workstation's network is configured correctly and no IT involvement is needed.**
+
+If the network does block Aitrium, the application tells you in two places:
+
+- **Right after sign-in** — a full-screen message:
+
+<img style={{borderRadius: "8px"}} src="/images/networking/cant-reach-aitrium-signin.png" alt="Can't reach Aitrium screen shown after sign-in, with a link to the network configuration guide and a Try again button" />
+
+- **While signed in** — a red **Connection issue** indicator in the header; select it for details:
+
+<img style={{borderRadius: "8px"}} src="/images/networking/connection-issue-header.png" alt="Connection issue indicator in the AitriumOS header with the Can't reach Aitrium details panel open" />
+
+Both mean the same thing: the workstation cannot connect to Aitrium's servers (the **Web access** requirement above), so trials and submissions won't work until the connection is restored. **Your account and data are fine** — this is a network or firewall setting on the workstation, not a problem with Aitrium or your sign-in. Local tools remain available in the meantime.
+
+To resolve it:
+
+1. Use the in-app link to send the **network configuration guide** to your IT team — it lists exactly which addresses to allow (the same information as the [firewall allowlist](/security/aitrium-os/data-flows#firewall-allowlist)). If your site routes traffic through a corporate proxy, IT should also see [Corporate HTTP proxy](/security/aitrium-os/proxy-configuration).
+2. Once IT has made the change, select **Try again**.
+3. If the message persists after IT's change, contact [support@aitriumos.com](mailto:support@aitriumos.com).
+
 <Info>
-  Once installed, verify you can connect to your trial well before your first submission is due — not on the day data is due. If uploads cannot connect, ask your IT team to re-check the **Data upload** item above, and contact [support@aitriumos.com](mailto:support@aitriumos.com) if the problem persists.
+  Sign in on the workstation well before your first submission is due — not the day data is due — so any network change has time to be made. The **Data upload** (SFTP) connection is separate from this check and is verified during a submission: if uploads cannot connect, ask your IT team to re-check the **Data upload** item above, and contact [support@aitriumos.com](mailto:support@aitriumos.com) if the problem persists.
 </Info>
 
 ### Installing AitriumOS
@@ -70,7 +92,7 @@ Most hospital networks restrict which applications can be installed and which ne
   />
 </div>
 
-After installation, launch AitriumOS and log in with your username and password.
+After installation, launch AitriumOS and log in with your username and password. If you see a **"Can't reach Aitrium"** message instead of your trials, the workstation's network is blocking the connection — see [the section above](#how-you’ll-know-“can’t-reach-aitrium”).
 
 ### App Updates
 If an update is available for AitriumOS, you will see the version button in the header turn blue:

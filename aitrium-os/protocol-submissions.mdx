@@ -164,18 +164,34 @@ The final step uploads the processed dataset to the trial's configured destinati
    - Anonymization status confirmation
    - QA status confirmation (if applicable)
 
-2. **Upload** — Files are transferred to the configured destination (SFTP, cloud storage, etc.) with real-time progress tracking
+2. **Upload** — The upload runs in two parts, shown on the transfer progress card: **Data Transfer** uploads the files to the trial's configured destination with real-time progress tracking, then **Aitrium Sync** registers the submission with Aitrium — recording it for the trial and notifying the trial team
 
-3. **Success** — A confirmation screen displays transfer details and provides the option to submit another patient dataset
+3. **Success** — The **Submission complete** screen displays transfer details and provides the option to submit another patient dataset
 
-{/* TODO: Add screenshot of submission success screen */}
+<img src="/images/trial_submissions/upload-in-progress.png" alt="Upload progress bar mid-transfer in AitriumOS" style={{borderRadius: "8px"}} />
+
+*While the upload is in progress, keep AitriumOS open.*
+
+<img src="/images/trial_submissions/upload-complete-confirmation.png" alt="Submission complete screen shown after the submission finishes" style={{borderRadius: "8px"}} />
+
+*The Submission complete screen. A progress bar at 100% is not this screen — the submission is still finishing.*
+
+<Warning>
+  **Keep AitriumOS open until the Submission complete screen appears, then verify the submission.** Closing the application while the upload is finishing can leave a submission unregistered — the trial team receives the files but gets no notification, and the event will not move to **Completed**. After every upload, confirm the event shows **Completed** in the Patient Submission Queue (see [Monitoring Submission Status](#monitoring-submission-status)). If it doesn't, see [Troubleshooting](#troubleshooting-common-issues).
+</Warning>
 
 ## Monitoring Submission Status
 
-After submission, track completion from the trial homepage:
+Verifying the submission is the final step of every upload — don't skip it:
 
 1. Navigate to the trial in AitriumOS
-2. View the **Patient Submission Queue** for real-time status per patient and event
+2. Find the patient's event in the **Patient Submission Queue** and confirm its status shows **Completed**
+
+<img src="/images/trial_submissions/submission-queue-completed.png" alt="Patient Submission Queue showing the just-submitted event as Completed" style={{borderRadius: "8px"}} />
+
+If the event has not moved to **Completed** after you saw the **Submission complete** screen, the submission did not finish registering — see [Troubleshooting](#troubleshooting-common-issues).
+
+The queue provides real-time status per patient and event.
 
 Submission statuses progress through:
 - **Pending Dates** — Waiting for anchor dates (e.g., randomization date not yet set)
@@ -251,6 +267,16 @@ If data transfer fails:
 - Check that the trial's integration is properly configured (contact your trial administrator)
 - Ensure you have proper trial upload permissions
 - Contact support if issues persist
+
+### Upload finished but the event doesn't show as Completed
+
+If the upload completed but the patient's event still has not moved to **Completed** in the Patient Submission Queue, the application was most likely closed before the submission finished registering. The trial team received the files, but no notification was sent and the submission was not recorded.
+
+To resolve:
+- Run the submission again for that event from the **Patient Submission Queue**, exactly as you did the first time. The trial team can disregard the duplicate file.
+- If the event still does not show as **Completed**, contact [support@aitriumos.com](mailto:support@aitriumos.com) with your trial ID and patient ID.
+
+Verifying every submission in the queue right after uploading (see [Monitoring Submission Status](#monitoring-submission-status)) catches this immediately instead of weeks later.
 
 ## Need Help?
 
