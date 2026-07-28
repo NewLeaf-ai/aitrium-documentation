@@ -26,20 +26,22 @@ For awareness, behaviors an EDR may flag heuristically: the bundled imaging help
 
 ## Validation performed
 
-The following checks are run against each release. Results below are for **v2.1.2 (x64)**, recorded 2026-07-02.
+The following checks are run against each release. Results below are for **v2.1.9 (x64)**, recorded 2026-07-28.
 
 | Validation | Result |
 |---|---|
 | **Authenticode code-signature verification** (both installers) | ✅ Valid — signature verifies, chains to the Microsoft Identity Verification Root CA 2020, and is RFC-3161 timestamped. Confirms the binaries are signed by the stated publisher and unaltered since signing. |
 | **Cryptographic integrity (hash manifest)** | ✅ Recorded — see below; lets your team confirm a downloaded file matches the published build. |
-| **Multi-engine static scan** (75 engines, incl. major EDR/AV vendors, via VirusTotal) | ✅ Clean — 0 detections on both installers (0 malicious, 0 suspicious). |
+| **Multi-engine static scan** (incl. major EDR/AV vendors, via VirusTotal) | ✅ Clean — 0 detections on both installers (0/62 MSI, 0/69 NSIS; 0 malicious, 0 suspicious). |
 | **EDR behavioral validation** (install + full submission workflow on an EDR-enrolled Windows 11 endpoint) | Available on request — run against an evaluation tenant or supported under your own policy. |
 
-### v2.1.2 hash manifest (SHA-256)
+### v2.1.9 hash manifest (SHA-256)
 
 | Installer | SHA-256 |
 |---|---|
-| `AitriumOS_2.1.2_x64_en-US.msi` (MSI) | `754791d3d3d58575ce96addf86ca13fa440b876bce77d9458aa0ee9ca6f4e0c8` |
+| `AitriumOS_2.1.9_x64_en-US.msi` (MSI) | `15b712c42693f96726cbe622e635cc37f3097c54ffe2a1a2c7561a61b8061ed4` |
+| `AitriumOS_2.1.9_x64-setup.exe` (NSIS) | `2096ed2c9996e4d05d25625901265abcc03f4302f9f05ee905fec8a24b4de4a8` |
 
-**Independent verification (VirusTotal, 0/75, scanned 2026-06-03):**
-- [MSI installer report](https://www.virustotal.com/gui/file/754791d3d3d58575ce96addf86ca13fa440b876bce77d9458aa0ee9ca6f4e0c8)
+**Independent verification (VirusTotal, scanned 2026-07-28):**
+- [MSI installer report (0/62)](https://www.virustotal.com/gui/file/15b712c42693f96726cbe622e635cc37f3097c54ffe2a1a2c7561a61b8061ed4)
+- [NSIS installer report (0/69)](https://www.virustotal.com/gui/file/2096ed2c9996e4d05d25625901265abcc03f4302f9f05ee905fec8a24b4de4a8)

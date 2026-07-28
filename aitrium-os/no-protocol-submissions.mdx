@@ -63,17 +63,36 @@ Before submission, the user can:
 - Approve data for submission.
 
 ### 5. Upload to Trial
-The final step sends:
-- A zip file for the patient dataset named according to the clinical trial requirements.
-- Provides upload progress tracking
-- Confirms successful submission
+
+The final step packages the approved dataset as a zip file named according to the clinical trial requirements, then completes the submission in two parts:
+
+1. **Data Transfer** — the dataset is uploaded to the trial's data destination, with a progress bar tracking the transfer.
+2. **Aitrium Sync** — the submission is registered with Aitrium, which records it for the trial and notifies the trial team.
+
+Both parts run automatically, and the transfer progress card shows which one is underway. When both finish, AitriumOS shows the **Submission complete** screen.
+
+<img src="/images/trial_submissions/upload-in-progress.png" alt="Upload progress bar mid-transfer in AitriumOS" style={{borderRadius: "8px"}} />
+
+*While the upload is in progress, keep AitriumOS open.*
+
+<img src="/images/trial_submissions/upload-complete-confirmation.png" alt="Submission complete screen shown after the submission finishes" style={{borderRadius: "8px"}} />
+
+*The Submission complete screen. A progress bar at 100% is not this screen — the submission is still finishing.*
+
+<Warning>
+  **Keep AitriumOS open until the Submission complete screen appears, then verify the submission.** Closing the application while the upload is finishing can leave a submission unregistered — the trial team receives the files but gets no notification, and the dataset will not appear as submitted. After every upload, confirm the dataset shows as submitted on the trial page (see [Monitoring Submission Status](#monitoring-submission-status)). If it doesn't, see [Troubleshooting](#troubleshooting-common-issues).
+</Warning>
 
 ## Monitoring Submission Status
 
-After submission, you can track the status of each patient dataset:
+Verifying the submission is the final step of every upload — don't skip it:
 
-1. Navigate to the trial homepage in AitriumOS
-2. View dataset completion status for each Trial Patient ID.
+1. Navigate to the trial homepage in AitriumOS.
+2. Find the patient in the **Submit a Patient Dataset** table and confirm the submission registered: the patient's **Last Sent** time reflects your upload, and the dataset's status no longer shows **Submit Dataset**.
+
+<img src="/images/trial_submissions/dataset-table-submitted.png" alt="Submit a Patient Dataset table showing a just-submitted patient with an updated Last Sent time and a Complete status" style={{borderRadius: "8px"}} />
+
+If the **Last Sent** time has not updated after you saw the **Submission complete** screen, the submission did not finish registering — see [Troubleshooting](#troubleshooting-common-issues).
 
 ## Resubmitting a Dataset
 
@@ -121,6 +140,16 @@ If uploads fail:
 - Check available disk space
 - Ensure you have proper trial permissions
 - Contact support if issues persist
+
+### Upload finished but the dataset doesn't show as submitted
+
+If the upload completed but the patient's row on the trial page doesn't reflect it — the **Last Sent** time has not updated, or the dataset still shows **Submit Dataset** — the application was most likely closed before the submission finished registering. The trial team received the files, but no notification was sent and the submission was not recorded.
+
+To resolve:
+- Run the submission again for that patient from the **Submit a Patient Dataset** table, exactly as you did the first time. The trial team can disregard the duplicate file.
+- If the dataset still does not show as submitted, contact [support@aitriumos.com](mailto:support@aitriumos.com) with your trial ID and patient ID.
+
+Verifying every submission on the trial page right after uploading (see [Monitoring Submission Status](#monitoring-submission-status)) catches this immediately instead of weeks later.
 
 
 #### Trials Module Deep-Dive

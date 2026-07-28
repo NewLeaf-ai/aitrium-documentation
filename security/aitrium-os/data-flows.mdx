@@ -17,9 +17,9 @@ sequenceDiagram
     participant INV as Investigator destination
 
     TM->>AC: Create trial with policies (de-identification, protocol, sites)
-    SU->>AC: Sign in; request active trials
+    SU->>AC: Sign in and request active trials
     AC-->>SU: Return authorized trials
-    SU->>AC: Select trial; request policies
+    SU->>AC: Select trial and request policies
     AC-->>SU: Return trial policies
     SU->>OS: Select local patient dataset
     Note over OS: Validate, standardize, and<br/>de-identify — all on the workstation
