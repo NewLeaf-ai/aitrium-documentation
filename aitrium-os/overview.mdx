@@ -84,6 +84,18 @@ To resolve it:
 
 3. **Install the Application**: Follow your operating system's standard installation process.
 
+#### Switching Windows installer types
+
+If you want to move from one Windows installer type to the other — for example, switching to the Standard installer so future updates never need an administrator — switch cleanly rather than installing the second type alongside the first:
+
+1. **Check what is installed now**: open **Windows Settings → Installed apps** and search for AitriumOS. If more than one AitriumOS entry is listed, you already have duplicate copies — remove all of them in the steps below, then install fresh.
+2. **Uninstall the existing copy**:
+   - An **MSI copy** was installed machine-wide, so removing it **requires administrator rights one last time** — if you don't have them, ask IT to uninstall it. After that, the Standard installer installs and updates without ever needing an administrator again.
+   - A **Standard copy** uninstalls without administrator rights.
+3. **Install the new type**: return to the Downloads page and download the type you want. (The page will show a warning because your previous downloads were the other type — that warning exists to prevent *accidental* switches; when you're switching on purpose, continue.)
+4. **Your data is safe either way**: submitted trial data lives in Aitrium, not on the workstation, and your local sign-in and settings are kept through an uninstall/reinstall.
+
+
 ### Using AitriumOS
 
 <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
