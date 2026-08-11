@@ -71,15 +71,30 @@ To resolve it:
 1. **Log in to Aitrium**: Access your account at [https://app.aitriumos.com](https://app.aitriumos.com) using your provided username and password.
 
 2. **Download the Application**: 
-   - Navigate to 'Downloads' on the lefthand navigation bar
-   - Select the appropriate version for your operating system:
-     - For Windows: Choose between x64 (64-bit) or x86 (32-bit) versions
-       - Note: Windows 11 is only available in 64-bit
-       - For older Windows versions, check 'System Information -> System Type' or 'My Computer -> Properties'
-     - For Mac: Select based on your CPU (Apple Silicon or Intel)
-       - Check by clicking the Apple icon -> About This Mac
+   - Navigate to 'Downloads' on the lefthand navigation bar — open the page **on the computer you want to install AitriumOS on**, and it will recommend the right download for that computer
+   - For **Windows**, there are two installers that do the same thing but install differently:
+     - **Standard installer** — installs for your account only and does **not** need administrator rights. This is the right choice for almost everyone installing on their own workstation.
+     - **MSI installer** — installs machine-wide for all accounts and **requires administrator rights**. Only choose this if your IT department deploys software this way (they will usually know).
+   - For **Mac**: select based on your CPU (Apple Silicon or Intel)
+     - Check by clicking the Apple icon -> About This Mac
+
+<Warning>
+**Install only one Windows installer type.** The two types don't detect each other, so installing both puts two separate copies of AitriumOS on the computer — two identical icons that can run different versions, which is very confusing. If you're not sure whether AitriumOS is already installed, check **Windows Settings → Installed apps** first: if an AitriumOS entry is already there, update or uninstall that copy instead of installing a second one. The Downloads page will also warn you if you're about to download a different type than you used before.
+</Warning>
 
 3. **Install the Application**: Follow your operating system's standard installation process.
+
+#### Switching Windows installer types
+
+If you want to move from one Windows installer type to the other — for example, switching to the Standard installer so future updates never need an administrator — switch cleanly rather than installing the second type alongside the first:
+
+1. **Check what is installed now**: open **Windows Settings → Installed apps** and search for AitriumOS. If more than one AitriumOS entry is listed, you already have duplicate copies — remove all of them in the steps below, then install fresh.
+2. **Uninstall the existing copy**:
+   - An **MSI copy** was installed machine-wide, so removing it **requires administrator rights one last time** — if you don't have them, ask IT to uninstall it. After that, the Standard installer installs and updates without ever needing an administrator again.
+   - A **Standard copy** uninstalls without administrator rights.
+3. **Install the new type**: return to the Downloads page and download the type you want. (The page will show a warning because your previous downloads were the other type — that warning exists to prevent *accidental* switches; when you're switching on purpose, continue.)
+4. **Your data is safe either way**: submitted trial data lives in Aitrium, not on the workstation, and your local sign-in and settings are kept through an uninstall/reinstall.
+
 
 ### Using AitriumOS
 
