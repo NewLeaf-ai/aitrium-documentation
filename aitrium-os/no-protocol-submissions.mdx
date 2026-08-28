@@ -1,29 +1,38 @@
 ---
-title: "Basic Data Submission"
-description: "Step-by-step guide for submitting clinical trial data using the basic submission workflow in AitriumOS."
+title: "EORTC Data Submission"
+description: "Step-by-step guide for submitting clinical trial data using the EORTC submission workflow in AitriumOS."
 ---
 
 ## Overview
 
 <Info>
-  **Is this the right guide for your trial?** Open your trial in AitriumOS and look at its page. If you see **Trial Submission Events** and a **Submit a Patient Dataset** table listing each Trial Patient ID, you are in the right place. If instead you see a **Trial Data Submission Schedule** with a **Patient Submission Queue** showing each patient's study arm and regimens, follow [RTQA Data Submission](/aitrium-os/protocol-submissions) instead.
+  **This guide is for EORTC trials.** For all other trials, follow [RTQA Data Submission](/aitrium-os/protocol-submissions) instead.
 </Info>
 
-This guide walks through submitting clinical trial data with AitriumOS for trials that use a per-patient dataset checklist. The submission process ensures your data meets all trial requirements while maintaining patient privacy through standardization and de-identification.
+This guide walks through submitting clinical trial data with AitriumOS for EORTC trials, which use a per-patient dataset checklist. The submission process ensures your data meets all trial requirements while maintaining patient privacy through standardization and de-identification.
 
 ## Step-by-Step Walkthrough
 
-<div style={{ position: "relative", paddingBottom: "calc(54.85407980941036% + 41px)", height: 0, width: "100%" }}>
+<div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
   <iframe 
-    src="https://demo.arcade.software/bwn6hdByRkjUueOQduJJ?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true" 
-    title="Submit and Standardize a Patient Dataset for Clinical Trial Review" 
-    frameBorder="0" 
-    loading="lazy" 
+    src="https://supercut.video/embed/aitrium/K8ppUTUdCx8K6rN6sc62GN?embed=full"
+    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
     allowFullScreen
-    allow="clipboard-write" 
-    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", colorScheme: "light" }}
   />
 </div>
+
+## Adding a Patient
+
+Before you can submit data for a patient, the patient must be added to the trial:
+
+1. Open the trial in AitriumOS and select **Add Patient**.
+2. Enter the patient's **Trial Patient ID** exactly as assigned by the trial.
+3. The patient appears in the **Submit a Patient Dataset** table, ready for submission.
+
+<Warning>
+  The Trial Patient ID is the de-identified ID the trial team uses to track this patient — double-check it before saving. Never enter a medical record number or other identifying value.
+</Warning>
 
 ## Submission Process
 
@@ -104,7 +113,9 @@ A submission may need to be repeated — for example, when a dataset was incompl
    - **Resubmit Dataset** — the dataset should be submitted again; selecting it restarts the submission flow for that patient.
 3. Prepare the corrected dataset and proceed through the same validation, standardization, de-identification, and review steps as the original submission.
 
-A resubmission replaces the previous submission for that patient in the trial's review workflow; earlier submissions remain recorded for traceability.
+<Info>
+  **Do not add the patient again.** Resubmit from the patient's existing row — never re-enter the Trial Patient ID as a new patient. The resubmission becomes the active dataset the trial team reviews; earlier submissions stay recorded for traceability but are no longer the dataset under review.
+</Info>
 
 ## Best Practices
 
@@ -152,22 +163,9 @@ To resolve:
 Verifying every submission on the trial page right after uploading (see [Monitoring Submission Status](#monitoring-submission-status)) catches this immediately instead of weeks later.
 
 
-#### Trials Module Deep-Dive
-
-<div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
-  <iframe 
-    src="https://supercut.video/embed/aitrium/K8ppUTUdCx8K6rN6sc62GN?embed=full"
-    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowFullScreen
-  />
-</div>
-
-
 ## Need Help?
 
 If you encounter any issues during the submission process:
 - Review the error messages carefully
 - Consult the trial-specific requirements documentation
 - Contact support at [support@aitriumos.com](mailto:support@aitriumos.com)
-- Include your trial ID and patient ID when reporting issues
