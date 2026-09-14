@@ -1,68 +1,226 @@
 ---
 title: "Corporate HTTP proxy"
-description: "Route AitriumOS outbound traffic through your organization's HTTP proxy instead of allowing direct egress through the firewall."
+description: "Configure and validate AitriumOS with a corporate HTTP proxy, including Windows Integrated Authentication, NTLMv2, and Basic authentication."
 ---
 
-Many organizations require internet-bound traffic to route through a corporate proxy rather than egress directly through the firewall. AitriumOS supports this: its network traffic can be pointed at your proxy using the standard `HTTPS_PROXY` environment variable — no special build or in-application setting is required, and it works with the version already installed.
-
-This is an alternative to the direct [firewall allowlist](/security/aitrium-os/data-flows#firewall-allowlist). Use whichever matches your organization's policy — you do not need both.
+AitriumOS connects through your organization's HTTP proxy to reach its HTTPS services. It supports proxies with no authentication, Windows Integrated Authentication (NTLMv2/Negotiate), and Basic authentication.
 
 <Note>
-  AitriumOS makes two kinds of outbound connection. Interactive traffic (sign-in and web pages) follows the workstation's system proxy automatically. Background traffic (the application's API and data calls) follows the `HTTPS_PROXY` environment variable described below. Setting `HTTPS_PROXY` brings the background traffic in line with your proxy so the whole application works consistently.
+  **Version covered: AitriumOS 2.2.4 for Windows.** If you use an earlier version, update before following this guide.
 </Note>
 
-## Configure the proxy on Windows
+Start with [Configure the proxy](#configure-the-proxy), then run the [Acceptance Test](#acceptance-test). For screenshots and sign-in help, see [What users will see](#what-users-will-see).
 
-Set `HTTPS_PROXY` as a **system (machine-level)** environment variable so it applies to every user who signs into the workstation, then restart the machine so AitriumOS reads it on next launch.
+## Configure the proxy
+
+Select the setup that matches your Windows configuration:
+
+| Your configuration | What to do |
+|---|---|
+| **Enabled Windows manual proxy** | AitriumOS detects it automatically. No proxy environment variable is required. Follow [Windows manual proxy](#windows-manual-proxy). |
+| **PAC setup script or WPAD automatic discovery** | Keep the Windows policy and configure an explicit proxy address for background connections. Follow [PAC or WPAD](#pac-or-wpad). |
+| **PAC selects multiple proxies or requires automatic failover** | Contact [support](#contact-support) before deployment. Dynamic PAC routing is not supported by the application's background connections. |
+
+### Windows manual proxy
+
+1. In **Windows Settings → Network & internet → Proxy → Manual proxy setup**, enable your approved proxy address and port. If already configured, leave it in place.
+2. Fully exit AitriumOS, including any tray process, and launch it again.
+3. Open **Settings → Network** in AitriumOS. Confirm **Connection: Hospital network** and the expected **Detected network**, then select **Test connection**.
+
+AitriumOS reads the proxy settings for the Windows user running the application. Configure the policy for each user on a shared workstation. There is no separate proxy-address field inside AitriumOS.
+
+<Note>
+  Existing `HTTPS_PROXY` or `ALL_PROXY` environment variables can override detection of the Windows manual proxy. Review any previous test or deployment overrides if the detected address is unexpected.
+</Note>
+
+### PAC or WPAD
+
+The Windows sign-in component (WebView2) follows the system's PAC/WPAD policy. AitriumOS background connections need an explicit proxy address as well.
+
+1. Keep the Windows PAC/WPAD policy enabled.
+2. Confirm that one approved proxy can serve all required Aitrium HTTPS destinations.
+3. Deploy that address as a machine-level environment variable using your normal IT tooling:
+
+   ```text
+   HTTPS_PROXY=http://proxy.example.org:8080
+   ```
+
+4. Sign out of Windows and back in, or restart the workstation, so newly launched applications inherit the setting.
+5. Launch AitriumOS and check **Settings → Network → Test connection**.
+
+Use your actual proxy host and port. Do not include credentials in the variable. If a single fixed proxy cannot satisfy your policy, contact [support](#contact-support) before proceeding.
+
+<Accordion title="Using an existing managed HTTPS_PROXY setting">
+  You can retain an approved `HTTPS_PROXY` deployment. It takes precedence over Windows manual-proxy detection for background connections. Keep the Windows system proxy policy configured for WebView2 sign-in traffic as well.
+
+  Use a machine-level setting for shared workstations; a per-user setting applies only to that account. After changing it, sign out and back in before launching AitriumOS.
+</Accordion>
+
+### Network access requirements
+
+- Permit the required HTTPS destinations through the proxy. See the [destination allowlist](/security/aitrium-os/data-flows#firewall-allowlist).
+- If your proxy performs TLS inspection, install your organization's inspection CA in the Windows certificate store according to your policy.
+- Permit trial-specific SFTP/FTP connections separately. These transfers do not use the HTTP proxy; see [transfer destinations](/security/aitrium-os/data-flows#transfer-to-the-investigator).
+
+Configuring a proxy does not enforce a workstation-wide ban on direct traffic. Keep your firewall policy in place and verify routing during the Acceptance Test.
+
+## Authentication and credential protection
+
+AitriumOS first tries the proxy without credentials. If authentication is required, it attempts Windows sign-in, then a saved network credential. If neither succeeds, it presents the network sign-in form.
+
+| Proxy authentication | Expected behavior |
+|---|---|
+| **None** | Connects without a network sign-in prompt. |
+| **NTLMv2 / Negotiate** | Uses Windows SSPI to attempt authentication with the signed-in Windows session. Kerberos selection depends on your domain and proxy configuration and requires validation in your environment. |
+| **Basic** | Uses a saved proxy credential or asks the user to sign in. |
+
+Network credentials are separate from the user's Aitrium account. NTLMv1 has not been validated and is not recommended.
+
+When Windows sign-in succeeds, AitriumOS stores no additional network password. User-entered passwords are protected at rest with Windows DPAPI in the current user's context and are excluded from application logs and support bundles. **Forget sign-in** removes the saved credential. A rejected saved password is marked invalid so AitriumOS does not repeatedly retry it.
+
+## What users will see
+
+Which screens appear depends on your network configuration. These Windows screenshots use a local test proxy; `127.0.0.1:8888` is an example, not an address to configure at your site.
+
+### Automatic connection
+
+If the proxy accepts the current Windows sign-in, AitriumOS connects without asking for another password. The header displays **Hospital network**, and **Settings → Network** shows **Sign-in: Windows sign-in**.
+
+A proxy that does not require authentication also connects without a sign-in form. Check **Connection** and **Detected network** in Network settings to see the configured route; the authenticated **Hospital network** header indicator may not appear for this connection.
+
+### Hospital-network sign-in requested
+
+**When it appears:** The proxy requires credentials and automatic authentication has not completed successfully.
+
+The screen is titled **Connect through your hospital network** and explains why another sign-in is needed. Enter the hospital-network username and password specified by your IT team, then select **Connect to Aitrium**. These may differ from your Aitrium account credentials.
+
+You can select **Continue with local tools** while your IT team helps resolve access.
+
+<Frame caption="Hospital-network sign-in. The footer has an outdated version label; check the application header for the installed version.">
+  <img src="/public/images/networking/hospital-network-sign-in.png" alt="AitriumOS network sign-in screen with username and password fields, Connect to Aitrium, and Continue with local tools" />
+</Frame>
+
+### Credentials rejected or no longer accepted
+
+**When it appears:** A connection attempt using the entered credentials did not succeed. The form displays **We couldn’t verify these details** and allows another attempt.
+
+If a saved credential has been rejected, the title changes to **Update your hospital network sign-in**, with an **Update and reconnect** button. Enter your current work password or ask IT to confirm your account's proxy access. This message alone does not establish that a password has expired.
+
+### Continuing with local tools
+
+**When it appears:** You choose to continue while network sign-in remains unresolved.
+
+The application opens with **Network sign-in needed** in the header and a persistent **Hospital network sign-in needed** banner. Local tools remain available. Previously loaded project information may still be visible, but live refreshes and submissions may fail until you reconnect.
+
+<Frame caption="The network warning remains visible while previously loaded project information is on screen. A separate data-transfer status does not confirm access to Aitrium services.">
+  <img src="/public/images/networking/network-local-tools.png" alt="Trial dashboard with Network sign-in needed in the header and a hospital-network warning banner containing a Sign in button" />
+</Frame>
+
+<Note>
+  Use **Settings → Network → Test connection** to check live connectivity. Previously loaded data and separate transfer connections can remain visible while access to Aitrium services is unavailable.
+</Note>
+
+### Reconnecting from the current page
+
+Select **Sign in** on the banner to open the hospital-network sign-in dialog without leaving the page. You can also select the header's **Network sign-in needed** indicator and choose **Sign in** or **Network settings**.
+
+<Frame caption="Sign in to reconnect without leaving the current page.">
+  <img src="/public/images/networking/network-reconnect-dialog.png" alt="Hospital-network sign-in dialog displayed over the current trial dashboard" />
+</Frame>
+
+After successful sign-in, AitriumOS clears the resolved warning and refreshes project and integration information without reloading the application. Check the status of any previously failed submission before retrying it.
+
+### Reviewing or removing a saved sign-in
+
+Open **Settings → Network** to review the connection:
+
+<Frame caption="Network settings shows the detected proxy and an Add sign-in action when authentication is needed.">
+  <img src="/public/images/networking/network-settings-sign-in-needed.png" alt="Network settings showing Network sign-in needed, detected proxy 127.0.0.1:8888, Test connection, and Add sign-in" />
+</Frame>
+
+| Field or action | What it tells you or does |
+|---|---|
+| **Connection: Hospital network** | AitriumOS detected a configured proxy route. |
+| **Detected network** | Shows the proxy host and port; this field is informational. |
+| **Sign-in: Windows sign-in** | The current Windows session authenticated the connection. |
+| **Signed in as** | Identifies the separately saved network account, when present. |
+| **Test connection** | Checks whether AitriumOS can reach its services. |
+| **Add sign-in / Change sign-in** | Opens the network credential form when available. |
+| **Forget sign-in** | Removes AitriumOS's saved network credential after confirmation. |
+
+Removing a saved sign-in does not sign you out of Aitrium or Windows, and does not change the workstation's proxy configuration. Windows may still authenticate automatically, or existing proxy sessions may remain usable. If another sign-in is required, AitriumOS presents the same recovery flow described above.
+
+### Other connection messages
+
+| Message | What to do |
+|---|---|
+| **Can't reach Aitrium** | Check the workstation connection. IT may need to check the proxy and permitted destinations. Select **Try again** once connectivity is restored. This message does not necessarily mean credentials are needed. |
+| **Updates unavailable** | The update check failed while the Aitrium API remained reachable. Ask IT to check access to the update service. This warning alone does not block other workflows; their destinations must still be reachable. |
+
+Windows may also display a proxy sign-in prompt alongside the AitriumOS form. Follow your IT team's guidance for the expected proxy.
+
+After correcting a connection issue, use **Try again** or **Test connection** to recheck it. If IT changes the proxy address or configuration, fully exit and reopen AitriumOS to pick up the new route.
+
+## Acceptance Test
+
+Follow these steps on a managed Windows workstation using your organization's intended proxy policy.
 
 <Steps>
-  <Step title="Set the variable at the system level">
-    Deploy it with your standard tooling (Group Policy or Intune), or set it directly on the workstation:
-
-    - **System Properties** → *Advanced system settings* → *Environment Variables* → under **System variables**, add:
-
-    ```
-    HTTPS_PROXY = http://your-proxy-host:port
-    ```
-
-    - Or, from an **elevated** Command Prompt (`/M` sets it machine-wide):
-
-    ```
-    setx /M HTTPS_PROXY "http://your-proxy-host:port"
-    ```
-
-    Optionally also set `NO_PROXY = localhost,127.0.0.1` so AitriumOS's on-device components are never routed through the proxy.
+  <Step title="Confirm the route">
+    Configure the proxy, fully exit AitriumOS, and reopen it. Sign in to your Aitrium account.
   </Step>
-  <Step title="Restart the workstation">
-    Windows caches the environment for running applications, so a reboot (or sign out and back in) is required for AitriumOS to pick up the new value. Because the value is stored in the registry, it persists across restarts — you do not need to set it again.
+  <Step title="Authenticate if requested">
+    If **Connect through your hospital network** appears, sign in with an account approved by your IT team for testing.
   </Step>
-  <Step title="Confirm it works">
-    Open AitriumOS, sign in, and open a trial. Trial data (patients, integration status) should load. If it does, the application is routing through your proxy.
+  <Step title="Check Network settings">
+    Open **Settings → Network** and confirm:
+
+    - **Connection** is **Hospital network**.
+    - **Detected network** shows the expected proxy host and port.
+    - **Test connection** reports success.
+  </Step>
+  <Step title="Check online features">
+    Confirm that projects and integration status refresh, the application update check succeeds, and a test submission reaches its configured destination.
+  </Step>
+  <Step title="Verify network policy">
+    With your intended firewall restrictions active, confirm in proxy or firewall logs that Aitrium HTTPS traffic uses the approved proxy. If a temporary direct-HTTPS exception was granted, disable it for this test while retaining required SFTP/FTP access.
+  </Step>
+  <Step title="Test removal and recovery">
+    If a separate credential was saved, select **Forget sign-in** and reconnect when prompted. Confirm that warnings clear and project and integration information refresh. Windows authentication or an existing proxy session may keep the connection working after the saved credential is removed.
+  </Step>
+  <Step title="Check sign-in after restarting">
+    Fully exit and reopen AitriumOS. Confirm that Windows authentication or the saved network sign-in restores connectivity as expected.
   </Step>
 </Steps>
 
-<Note>
-  Set the variable at the **system** level, not per-user. A per-user variable applies only to the account that set it, which will fail on a shared clinical workstation used by multiple people.
-</Note>
+## Troubleshooting
 
-## macOS
+### Network settings shows `Connection: Direct`
 
-On macOS, prefer configuring the proxy in **System Settings → Network → Proxies**, which the application follows automatically. Environment variables set in a shell are not inherited by applications launched from Finder or the Dock, so the `HTTPS_PROXY` shell method is not reliable on macOS. If you need an explicit per-application proxy on macOS, contact [support@aitriumos.com](mailto:support@aitriumos.com).
+- Confirm the proxy was enabled before AitriumOS started.
+- Fully exit AitriumOS, including any background or tray process, and reopen it.
+- Confirm the proxy is configured for the same Windows user running AitriumOS.
+- For **Use setup script** or **Automatically detect settings**, follow [PAC or WPAD](#pac-or-wpad).
 
-## Limitations to plan for
+### The connection fails without showing network sign-in
 
-<Warning>
-  **Proxies that require authentication (NTLM / Kerberos / Windows Integrated Authentication) are not supported.** If your proxy challenges connections for credentials, AitriumOS cannot complete the handshake. In that case, add a bypass rule that lets the workstation reach the [Aitrium destinations](/security/aitrium-os/data-flows#firewall-allowlist) directly. Contact [support@aitriumos.com](mailto:support@aitriumos.com) if you are unsure whether your proxy authenticates.
-</Warning>
+The proxy may be unreachable, may be closing the connection without a standard `407` response, or may be advertising an unsupported authentication scheme. Check the response in your proxy logs for the status code and authentication scheme names. You do not need to share raw authentication headers for initial troubleshooting.
 
-<Warning>
-  **Dataset transfer to the investigator does not use the HTTP proxy.** The transfer to the investigator's endpoint is SFTP over TCP 22 (SSH), which cannot traverse an HTTP proxy. This connection always requires a direct outbound firewall exception to the investigator's SFTP host — separate from the proxy configuration above. See [Data Flows](/security/aitrium-os/data-flows#transfer-to-the-investigator).
-</Warning>
+### A saved password stopped working
 
-## Automatic proxy configuration (PAC / WPAD)
+Open **Settings → Network → Change sign-in** and enter the user's current network password. AitriumOS deliberately avoids repeated attempts with a rejected saved password to reduce the risk of account lockout.
 
-If your network configures proxies through an automatic configuration script (PAC) or auto-discovery (WPAD), set `HTTPS_PROXY` to the proxy address the script would resolve to for Aitrium's destinations. If your environment cannot use a static proxy address, contact [support@aitriumos.com](mailto:support@aitriumos.com) with the details and we will advise.
+### TLS or certificate errors occur
 
-<Info>
-  Not sure which approach fits your network? Send your proxy details (address, whether it authenticates, and whether it uses a PAC/auto-config script) to [support@aitriumos.com](mailto:support@aitriumos.com) and we will confirm the right configuration.
-</Info>
+If your organization performs TLS inspection, ensure its root CA is installed in the Windows certificate store according to your workstation policy.
+
+## Contact support
+
+Contact [support@aitriumos.com](mailto:support@aitriumos.com) with:
+
+- Your AitriumOS version and Windows domain/join status
+- The proxy configuration method: manual, PAC, or WPAD; whether one fixed proxy can be used
+- The proxy product, authentication method, and whether TLS inspection is enabled, if known
+- Which Acceptance Test steps passed or failed and any redacted application error message
+
+Please do not send passwords, authentication tokens, internal proxy addresses, PAC files, or unredacted logs by email. Your IT team can verify routing in its own logs and report the outcome. If further technical information is needed, we can coordinate through your organization's approved support channel.
