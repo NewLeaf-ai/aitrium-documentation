@@ -46,8 +46,10 @@ AitriumOS now asks Windows itself — the same WinHTTP resolver the operating sy
 
 If **Detected network** is absent while Windows does have a proxy policy, AitriumOS reports that its background connections are not using your proxy. Treat that as a configuration problem to resolve before submissions, not a cosmetic warning.
 
+**Automatically detect settings** being switched on, as it is by default on Windows, does not count as a proxy policy on its own. If no WPAD configuration is found on the network, AitriumOS connects direct and shows no warning.
+
 <Note>
-  AitriumOS re-checks the destination's proxy every few minutes, so a PAC change takes effect without a restart. Changing between *having* and *not having* a policy at all does require a restart.
+  AitriumOS re-checks the destination's proxy every few minutes, so a PAC change takes effect without a restart. If the script was unreachable when AitriumOS started, **Try again** or **Test connection** re-reads it immediately once it is back. Changing between *having* and *not having* a policy at all does require a restart.
 </Note>
 
 #### When an explicit address is still recommended
@@ -58,7 +60,7 @@ Automatic discovery removes the need for an environment variable in most deploym
 - **The proxy policy is applied per machine by a tool the user session cannot read** — for example a group policy or management agent that configures the service account or the machine store rather than the signed-in user's Internet Settings. AitriumOS reads the policy for the Windows user running the application, so a policy that account cannot see will not be discovered.
 - **Your site requires all traffic pinned to one audited proxy.** An explicit address fixes the route for every background connection regardless of what the script returns or how the network changes, which is easier to evidence in a security review.
 - **You are troubleshooting an absent Detected network.** If **Settings → Network** shows no **Detected network** while Windows does have a proxy policy, setting the address explicitly confirms whether the problem is discovery or the proxy itself — and restores correct routing immediately while you investigate.
-- **The PAC script is hosted on a slow or intermittently reachable server.** Application startup waits for the resolver, and a failed evaluation falls back to the proxy discovered for the rest of the session.
+- **The PAC script is hosted on a slow or intermittently reachable server.** While the script cannot be evaluated, AitriumOS sends its background connections direct, shows a **Proxy configuration unavailable** notice, and retries automatically. On a network that blocks direct traffic, those connections fail until the script is reachable again. An explicit address removes that dependency.
 
 To do that, deploy a machine-level environment variable with your normal IT tooling:
 
