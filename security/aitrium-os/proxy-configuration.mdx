@@ -6,7 +6,7 @@ description: "Configure and validate AitriumOS with a corporate HTTP proxy, incl
 AitriumOS connects through your organization's HTTP proxy to reach its HTTPS services. It supports proxies with no authentication, Windows Integrated Authentication (NTLMv2/Negotiate), and Basic authentication.
 
 <Note>
-  **Version covered: AitriumOS 2.2.4 for Windows.** If you use an earlier version, update before following this guide.
+  **Version covered: AitriumOS 2.2.5 for Windows.** If you use an earlier version, update before following this guide.
 </Note>
 
 Start with [Configure the proxy](#configure-the-proxy), then run the [Acceptance Test](#acceptance-test). For screenshots and sign-in help, see [What users will see](#what-users-will-see).
@@ -18,8 +18,8 @@ Select the setup that matches your Windows configuration:
 | Your configuration | What to do |
 |---|---|
 | **Enabled Windows manual proxy** | AitriumOS detects it automatically. No proxy environment variable is required. Follow [Windows manual proxy](#windows-manual-proxy). |
-| **PAC setup script or WPAD automatic discovery** | Keep the Windows policy and configure an explicit proxy address for background connections. Follow [PAC or WPAD](#pac-or-wpad). |
-| **PAC selects multiple proxies or requires automatic failover** | Contact [support](#contact-support) before deployment. Dynamic PAC routing is not supported by the application's background connections. |
+| **PAC setup script or WPAD automatic discovery** | AitriumOS 2.2.5 and later follows the policy automatically. No proxy environment variable is required. Follow [PAC or WPAD](#pac-or-wpad). |
+| **PAC selects multiple proxies or requires automatic failover** | AitriumOS uses the first usable proxy the script returns and does not fail over to the alternatives. If your policy depends on failover, configure an explicit address as described in [PAC or WPAD](#pac-or-wpad), or contact [support](#contact-support). |
 
 ### Windows manual proxy
 
@@ -35,20 +35,38 @@ AitriumOS reads the proxy settings for the Windows user running the application.
 
 ### PAC or WPAD
 
-The Windows sign-in component (WebView2) follows the system's PAC/WPAD policy. AitriumOS background connections need an explicit proxy address as well.
+**From AitriumOS 2.2.5, automatic proxy configuration is honoured by background connections.** Earlier versions applied the PAC/WPAD policy only to the Windows sign-in component (WebView2) and sent every background connection direct, which could bypass the proxy without any visible error.
 
-1. Keep the Windows PAC/WPAD policy enabled.
-2. Confirm that one approved proxy can serve all required Aitrium HTTPS destinations.
-3. Deploy that address as a machine-level environment variable using your normal IT tooling:
+AitriumOS now asks Windows itself — the same WinHTTP resolver the operating system uses — which proxy applies to each Aitrium destination. It reads `AutoConfigURL` and the **Automatically detect settings** policy for the Windows user running the application, evaluates your own PAC script, and honours a `DIRECT` result per destination.
 
-   ```text
-   HTTPS_PROXY=http://proxy.example.org:8080
-   ```
+1. Keep the Windows PAC/WPAD policy enabled. No proxy environment variable is required.
+2. Confirm the script returns an approved proxy (or a deliberate `DIRECT`) for every required Aitrium HTTPS destination. See the [destination allowlist](/security/aitrium-os/data-flows#firewall-allowlist).
+3. Fully exit AitriumOS, including any tray process, and launch it again. The policy is read at startup.
+4. Open **Settings → Network** in AitriumOS. **Detected network** names both the proxy address and how it was discovered — `PAC url` or `WPAD auto-detect`. Then select **Test connection**.
 
-4. Sign out of Windows and back in, or restart the workstation, so newly launched applications inherit the setting.
-5. Launch AitriumOS and check **Settings → Network → Test connection**.
+If **Detected network** is absent while Windows does have a proxy policy, AitriumOS reports that its background connections are not using your proxy. Treat that as a configuration problem to resolve before submissions, not a cosmetic warning.
 
-Use your actual proxy host and port. Do not include credentials in the variable. If a single fixed proxy cannot satisfy your policy, contact [support](#contact-support) before proceeding.
+<Note>
+  AitriumOS re-checks the destination's proxy every few minutes, so a PAC change takes effect without a restart. Changing between *having* and *not having* a policy at all does require a restart.
+</Note>
+
+#### When an explicit address is still recommended
+
+Automatic discovery removes the need for an environment variable in most deployments. Configure an explicit `HTTPS_PROXY` instead when any of the following apply:
+
+- **Your PAC script returns several proxies with failover semantics.** AitriumOS uses the first usable entry the script returns and does not fail over to the alternatives, so a deployment that depends on failover should name the proxy you want explicitly.
+- **The proxy policy is applied per machine by a tool the user session cannot read** — for example a group policy or management agent that configures the service account or the machine store rather than the signed-in user's Internet Settings. AitriumOS reads the policy for the Windows user running the application, so a policy that account cannot see will not be discovered.
+- **Your site requires all traffic pinned to one audited proxy.** An explicit address fixes the route for every background connection regardless of what the script returns or how the network changes, which is easier to evidence in a security review.
+- **You are troubleshooting an absent Detected network.** If **Settings → Network** shows no **Detected network** while Windows does have a proxy policy, setting the address explicitly confirms whether the problem is discovery or the proxy itself — and restores correct routing immediately while you investigate.
+- **The PAC script is hosted on a slow or intermittently reachable server.** Application startup waits for the resolver, and a failed evaluation falls back to the proxy discovered for the rest of the session.
+
+To do that, deploy a machine-level environment variable with your normal IT tooling:
+
+```text
+HTTPS_PROXY=http://proxy.example.org:8080
+```
+
+Sign out of Windows and back in, or restart the workstation, so newly launched applications inherit the setting. Use your actual proxy host and port. Do not include credentials in the variable. An explicit address takes precedence over both the Windows manual proxy and automatic discovery, and pins every background connection to that one proxy.
 
 <Accordion title="Using an existing managed HTTPS_PROXY setting">
   You can retain an approved `HTTPS_PROXY` deployment. It takes precedence over Windows manual-proxy detection for background connections. Keep the Windows system proxy policy configured for WebView2 sign-in traffic as well.

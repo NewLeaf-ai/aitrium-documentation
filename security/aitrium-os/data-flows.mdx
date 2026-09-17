@@ -41,14 +41,20 @@ Permit outbound **HTTPS (TCP 443)** to the following destinations:
 | `api.aitriumos.com` | Core Aitrium API (trials, policies, dataset records) | **Submissions blocked** — trials and patient data will not load |
 | `app.aitriumos.com` | Web sign-in and installer downloads | Sign-in and installer downloads blocked |
 | `*.googleapis.com`, `*.firebaseapp.com`, `oauth2.googleapis.com` | User authentication (Google Firebase Authentication) | **Sign-in blocked** |
+| `rt-plan-standardizer-api-336813653216.us-central1.run.app` | Radiotherapy structure standardization — maps a dataset's structure names onto the trial's required structures | **Submissions containing RT structures fail partway through**, at the structure-mapping step. Sign-in and trial loading are unaffected, so a site that allows only the API will not notice until a submission is already under way. |
+| `audit-logging-microservice-336813653216.us-central1.run.app` | Regulatory audit trail of user and system actions | Audit events queue locally and are retried; they are not lost, but they do not reach Aitrium's audit store until the host is reachable. Submissions are unaffected. |
 | `storage.googleapis.com` | Application updates (and any Google Cloud Storage transfer you configure) | App updates unavailable — submissions unaffected |
 
 <Note>
   The most important address to allow is `api.aitriumos.com`: if it is blocked, users can sign in but trials and patient data will not load, and no data can be submitted. AitriumOS shows an in-app "Can't reach Aitrium" message in this state pointing the user to this guide. `storage.googleapis.com` only affects automatic app updates and never blocks a submission.
 </Note>
 
+<Warning>
+  **Testing these addresses in a browser does not validate the application.** A browser (and AitriumOS's own sign-in window) follows the machine's proxy configuration, while AitriumOS's background connections use their own route — so a destination can open fine in a browser and still be blocked for the application, or the reverse. Validate from inside the application: **Settings → Network** lists each Aitrium service with its status and names the route AitriumOS used.
+</Warning>
+
 <Note>
-  AitriumOS also calls additional Aitrium-operated services on Google Cloud (HTTPS/443) — for example, audit logging and radiotherapy plan standardization. The exact endpoints for your release are provided to your IT team on request: [support@aitriumos.com](mailto:support@aitriumos.com).
+  The structure-standardization and audit-logging destinations are Aitrium-operated services on Google Cloud Run (HTTPS/443). If your release uses different endpoints, your IT team is told which ones: [support@aitriumos.com](mailto:support@aitriumos.com).
 </Note>
 
 <Tip>
