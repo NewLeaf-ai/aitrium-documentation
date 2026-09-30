@@ -52,15 +52,15 @@
             "icon": "upload",
             "pages": [
               "aitrium-os/no-protocol-submissions",
-              "aitrium-os/protocol-submissions",
-              {
-                "group": "Training",
-                "icon": "graduation-cap",
-                "pages": [
-                  "training/basic-submission",
-                  "training/rtqa-submission"
-                ]
-              }
+              "aitrium-os/protocol-submissions"
+            ]
+          },
+          {
+            "group": "Training",
+            "icon": "graduation-cap",
+            "pages": [
+              "training/basic-submission",
+              "training/rtqa-submission"
             ]
           },
           {
