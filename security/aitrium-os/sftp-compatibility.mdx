@@ -22,7 +22,7 @@ SSH uses the first algorithm in the client's list that the server also supports.
 | Category | Windows | macOS |
 |---|---|---|
 | **Key exchange** | `diffie-hellman-group-exchange-sha256`, `diffie-hellman-group16-sha512`, `diffie-hellman-group18-sha512`, `diffie-hellman-group14-sha256` | `curve25519-sha256`, `curve25519-sha256@libssh.org`, `ecdh-sha2-nistp256`, `ecdh-sha2-nistp384`, `ecdh-sha2-nistp521`, then the same Diffie-Hellman methods as Windows |
-| **Host key** | `rsa-sha2-512`, `rsa-sha2-256` | `ecdsa-sha2-nistp256`, `ecdsa-sha2-nistp384`, `ecdsa-sha2-nistp521`, `ssh-ed25519`, `rsa-sha2-512`, `rsa-sha2-256` |
+| **Host key** | `rsa-sha2-512`, `rsa-sha2-256`, then legacy `ssh-rsa` | `ecdsa-sha2-nistp256`, `ecdsa-sha2-nistp384`, `ecdsa-sha2-nistp521`, `ssh-ed25519`, `rsa-sha2-512`, `rsa-sha2-256`, then legacy `ssh-rsa` |
 | **Cipher** | `chacha20-poly1305@openssh.com`, `aes256-ctr`, `aes128-ctr` | `chacha20-poly1305@openssh.com`, `aes256-gcm@openssh.com`, `aes256-ctr`, `aes128-gcm@openssh.com`, `aes128-ctr` |
 | **MAC** | `hmac-sha2-256`, `hmac-sha2-256-etm@openssh.com`, `hmac-sha2-512`, `hmac-sha2-512-etm@openssh.com` | Same as Windows |
 
@@ -33,12 +33,16 @@ SSH uses the first algorithm in the client's list that the server also supports.
 
 ### Recommended server settings
 
-To accept connections from **both Windows and macOS** workstations, keep at least one algorithm from each row enabled:
+<Note>
+  **Servers that work with AitriumOS today need no changes for 2.2.7.** AitriumOS 2.2.7 only adds algorithms and reorders its preferences; everything earlier versions could negotiate, including legacy `ssh-rsa` host keys and SHA-1 key exchange and MACs, is still accepted. The settings below are guidance for **new servers or when hardening** an existing one.
+</Note>
+
+When hardening, keep at least one algorithm from each row enabled so that **both Windows and macOS** workstations can connect:
 
 | Category | Keep at least one of |
 |---|---|
 | Key exchange | `diffie-hellman-group-exchange-sha256`, `diffie-hellman-group16-sha512`, `diffie-hellman-group18-sha512`, `diffie-hellman-group14-sha256` |
-| Host key | An **RSA host key**, offered as `rsa-sha2-256` or `rsa-sha2-512` |
+| Host key | An **RSA host key**, preferably offered as `rsa-sha2-256` or `rsa-sha2-512` (legacy `ssh-rsa` is still accepted) |
 | Cipher | `chacha20-poly1305@openssh.com`, `aes256-ctr` or `aes128-ctr` |
 | MAC | `hmac-sha2-256` or `hmac-sha2-512`, with or without `-etm@openssh.com` (not needed if only `chacha20-poly1305@openssh.com` is offered) |
 
