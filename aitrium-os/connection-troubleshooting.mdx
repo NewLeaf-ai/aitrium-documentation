@@ -3,6 +3,10 @@ title: "Upload connection troubleshooting"
 description: "Check whether AitriumOS can reach a trial's SFTP server, and what each upload connection message means."
 ---
 
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Site users · Site IT" />
+
 ## How uploads connect
 
 For trials that transfer data over SFTP, AitriumOS sends the prepared, de-identified dataset **directly from the workstation** to the trial's SFTP server. It connects on the port the trial organization configured, usually TCP 22.

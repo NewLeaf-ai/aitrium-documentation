@@ -3,6 +3,10 @@ title: "Data Flows & Residency"
 description: "Network destinations, ports, firewall allowlist, where patient data lives, and how transfer credentials are handled."
 ---
 
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Security and compliance reviewers · Site IT (firewall allowlist)" />
+
 All communication between AitriumOS and Aitrium/Google cloud services is **HTTPS/TLS over port 443**, always initiated outbound by the application. The only non-443 traffic is the transfer of the prepared dataset to the investigator's endpoint (typically SFTP over TCP 22), whose destination is defined by the investigator — not by your Site.
 
 ## Submission sequence
