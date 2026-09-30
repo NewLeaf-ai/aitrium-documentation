@@ -7,7 +7,7 @@ import { Audience } from '/snippets/audience.mdx';
 
 <Audience who="Security and compliance reviewers at sites and trial organizations" />
 
-This Trust &amp; Security center documents how Aitrium products handle data, networking, access, and software integrity. It is written for IT and Information Security teams evaluating or deploying Aitrium.
+This Trust &amp; Security center documents how Aitrium products handle data, networking, access, and software integrity. It is written for security and compliance reviewers evaluating Aitrium, at sites and at trial organizations.
 
 The Aitrium platform spans several products. Security documentation is being expanded across the platform; coverage available today is below.
 
@@ -16,6 +16,19 @@ The Aitrium platform spans several products. Security documentation is being exp
 <CardGroup cols={1}>
   <Card title="AitriumOS — Desktop App for Sites" icon="square-terminal" href="/security/aitrium-os/overview">
     The IT &amp; security reference for the desktop application that Sites install to validate, de-identify, and transfer clinical trial data — architecture, data flows, access management, deployment, and build integrity.
+  </Card>
+</CardGroup>
+
+## Deploying or operating Aitrium?
+
+The step-by-step IT guides live with each audience's documentation:
+
+<CardGroup cols={2}>
+  <Card title="Site IT" icon="monitor-cog" href="/aitrium-os/it-setup">
+    Install AitriumOS, allow its network connections, configure a proxy, and validate the setup.
+  </Card>
+  <Card title="Trial organization IT" icon="server" href="/security/aitrium-os/sftp-compatibility">
+    Prepare the SFTP server that receives a trial's data from participating sites.
   </Card>
 </CardGroup>
 
