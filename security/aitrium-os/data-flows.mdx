@@ -3,6 +3,10 @@ title: "Data Flows & Residency"
 description: "Network destinations, ports, firewall allowlist, where patient data lives, and how transfer credentials are handled."
 ---
 
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Security and compliance reviewers · Site IT (firewall allowlist)" />
+
 All communication between AitriumOS and Aitrium/Google cloud services is **HTTPS/TLS over port 443**, always initiated outbound by the application. The only non-443 traffic is the transfer of the prepared dataset to the investigator's endpoint (typically SFTP over TCP 22), whose destination is defined by the investigator — not by your Site.
 
 ## Submission sequence
@@ -54,7 +58,7 @@ Permit outbound **HTTPS (TCP 443)** to the following destinations:
 </Warning>
 
 <Note>
-  The structure-standardization and audit-logging destinations are Aitrium-operated services on Google Cloud Run (HTTPS/443). If your release uses different endpoints, your IT team is told which ones: [support@aitriumos.com](mailto:support@aitriumos.com).
+  The structure-standardization and audit-logging destinations are Aitrium-operated services on Google Cloud Run (HTTPS/443). If your release uses different endpoints, your IT team is told which ones: [support@aitriumos.com](mailto:support@aitriumos.com). **Settings → Network** in AitriumOS also lists each service with its status.
 </Note>
 
 <Tip>
@@ -65,11 +69,19 @@ Permit outbound **HTTPS (TCP 443)** to the following destinations:
 
 | Destination | Purpose | Notes |
 |---|---|---|
-| Investigator's SFTP/FTP endpoint | Transfer of the prepared dataset | Host, port (typically TCP 22), and credentials are set by the investigator/sponsor organization — not entered or stored by your Site. The transfer connects directly from the workstation to the investigator and does not route through Aitrium. |
+| Investigator's SFTP/FTP endpoint | Transfer of the prepared dataset | Host, port (typically TCP 22), and credentials are set by the investigator's organization — not entered or stored by your Site. The transfer connects directly from the workstation to the investigator and does not route through Aitrium. AitriumOS shows the host and port under **Settings → Network → Upload destinations**. |
+
+Allowing this connection differs from the HTTPS destinations above:
+
+- **No proxy.** The SFTP transfer always connects directly from the workstation. It cannot be routed through a web (HTTP) proxy, so the workstation's firewall must permit outbound TCP to the investigator's host and port.
+- **Allow the program, not just the port.** Endpoint-security and per-application firewall rules can block AitriumOS while allowing other programs on the same port. Allow the executable `NewLeaf.exe`: `C:\Program Files\AitriumOS\NewLeaf.exe` for the per-machine (MSI) installer, or `%LOCALAPPDATA%\AitriumOS\NewLeaf.exe` for the per-user installer.
+- **Validate from AitriumOS.** A successful `ssh`, `sftp` or `Test-NetConnection` from the same workstation only shows that the port is open for that program. Use **Settings → Network → Upload destinations → Check now**, which tests the connection AitriumOS itself uses without signing in or transferring data.
 
 <Info>
-  The transfer originates from the **workstation's own outbound IP address**. If the investigator's SFTP server restricts sources by IP, allow the workstation's egress IP — there is no fixed Aitrium relay address.
+  The transfer originates from the **site's public egress IP address**. If the investigator's SFTP server restricts sources by IP, give the investigator's organization that address — there is no fixed Aitrium relay address.
 </Info>
+
+See [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting) for what each connection message means, and [SFTP server compatibility](/security/aitrium-os/sftp-compatibility) for the SSH algorithms and authentication methods AitriumOS supports.
 
 ## Data residency — where patient data lives
 

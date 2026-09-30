@@ -1,28 +1,45 @@
 ---
-title: "Administration Overview"
+title: "Organization administration"
 description: "Overview of Aitrium's administration capabilities for managing users, networks, audit logs, and integrations"
 ---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Organization admins at trial organizations and site organizations" />
 
 ## Overview
 
 Aitrium's administration features give organization administrators centralized control over users, sites, integrations, and compliance. Admin features are available to users with the **Admin** role and are accessed from the **Admin** section in the Aitrium Portal sidebar.
 
+Every organization on Aitrium has its own administrators, whether it runs trials (a **trial organization**) or contributes data from its sites (a **site organization**). Most admin pages apply to both; data transfer integrations are configured by the trial organization.
+
 ---
 
-## Admin Capabilities
+## Which pages apply to your organization
+
+| Page | Trial organizations | Site organizations |
+|------|---------------------|--------------------|
+| [User Management](/aitrium-admin/user-management) | Yes | Yes |
+| [Network Management](/aitrium-admin/network-management) | Yes — internal sites, plus external sites that Aitrium connects for multi-site trials | Yes — your internal sites |
+| [Audit Logging](/aitrium-admin/audit-logging) | Yes | Yes |
+| [Integrations](/aitrium-admin/integrations) | Yes — SFTP credentials and which sites and users may transfer data for each trial | No — transfer credentials are set by the trial organization. Upload destination results appear in your site's readiness ([details](/aitrium-admin/integrations#upload-destination-reachability)). |
+
+---
+
+## Admin pages
 
 <CardGroup cols={2}>
   <Card title="User Management" icon="users" href="/aitrium-admin/user-management">
-    Invite users, manage roles, assign sites, and control access across your organization.
+    All organizations. Invite users, manage roles, assign sites, and control access across your organization.
   </Card>
   <Card title="Network Management" icon="globe" href="/aitrium-admin/network-management">
-    Create internal sites, view external sites, and configure site identifiers for data transfers.
+    All organizations. Create internal sites, view external sites, and configure site identifiers for data transfers.
   </Card>
   <Card title="Audit Logging" icon="scroll" href="/aitrium-admin/audit-logging">
-    View, filter, and export a complete audit trail of system activity across your organization.
+    All organizations. View, filter, and export a complete audit trail of system activity across your organization.
   </Card>
   <Card title="Integrations" icon="plug" href="/aitrium-admin/integrations">
-    Configure credential groups, manage trial-level access, and monitor integration execution.
+    Trial organizations. Configure credential groups, manage trial-level access, and monitor integration execution.
   </Card>
 </CardGroup>
 

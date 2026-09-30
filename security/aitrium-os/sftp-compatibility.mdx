@@ -1,0 +1,105 @@
+---
+title: "SFTP Server Compatibility"
+description: "SSH algorithms, authentication methods and connection behavior of AitriumOS as an SFTP client, for IT teams operating a trial's SFTP server."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Trial organization IT" />
+
+This page is for the IT team that operates a trial's SFTP server. It lists what AitriumOS supports as an SFTP client and the traffic your server will see from participating sites. Site IT teams should start with [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting).
+
+<Note>
+  **Version covered: AitriumOS 2.2.7.** AitriumOS uses the libssh2 1.11 SSH library. On Windows it uses the Windows cryptography API (CNG); on macOS it uses OpenSSL. The two platforms support different algorithm sets, so check both columns below.
+</Note>
+
+## How sites connect
+
+- AitriumOS is an SSH-2 SFTP client. Each site's workstation connects **directly** to the host and port configured in the trial's integration. Traffic does not pass through Aitrium, and it cannot go through a web (HTTP) proxy.
+- Connections come from each **site's public egress IP address**. There is no fixed Aitrium address to allowlist. If your server restricts source addresses, each site must send you its egress addresses.
+- If your host name resolves to several addresses, such as IPv6 and IPv4, AitriumOS 2.2.7 tries them one after another, in the order the site's resolver returns them.
+
+## Supported algorithms
+
+SSH uses the first algorithm in the client's list that the server also supports. AitriumOS offers the algorithms below in this order of preference.
+
+| Category | Windows | macOS |
+|---|---|---|
+| **Key exchange** | `diffie-hellman-group-exchange-sha256`, `diffie-hellman-group16-sha512`, `diffie-hellman-group18-sha512`, `diffie-hellman-group14-sha256` | `curve25519-sha256`, `curve25519-sha256@libssh.org`, `ecdh-sha2-nistp256`, `ecdh-sha2-nistp384`, `ecdh-sha2-nistp521`, then the same Diffie-Hellman methods as Windows |
+| **Host key** | `rsa-sha2-512`, `rsa-sha2-256`, then legacy `ssh-rsa` | `ecdsa-sha2-nistp256`, `ecdsa-sha2-nistp384`, `ecdsa-sha2-nistp521`, `ssh-ed25519`, `rsa-sha2-512`, `rsa-sha2-256`, then legacy `ssh-rsa` |
+| **Cipher** | `chacha20-poly1305@openssh.com`, `aes256-ctr`, `aes128-ctr` | `chacha20-poly1305@openssh.com`, `aes256-gcm@openssh.com`, `aes256-ctr`, `aes128-gcm@openssh.com`, `aes128-ctr` |
+| **MAC** | `hmac-sha2-256`, `hmac-sha2-256-etm@openssh.com`, `hmac-sha2-512`, `hmac-sha2-512-etm@openssh.com` | Same as Windows |
+
+- **Integrated ciphers.** `chacha20-poly1305@openssh.com` and the AES-GCM ciphers include their own integrity protection, so no separate MAC is negotiated with them.
+- **Strict key exchange.** AitriumOS 2.2.7 supports the OpenSSH strict key exchange extension (`kex-strict-c-v00@openssh.com`), which mitigates the Terrapin attack.
+- **Not supported:** post-quantum hybrid key exchange (such as `sntrup761x25519-sha512` or `mlkem768x25519-sha256`) and DSA host keys. Servers that offer post-quantum methods alongside the classic ones above are unaffected.
+- **Older algorithms**, such as SHA-1-based key exchange and MACs and CBC-mode ciphers, are still offered at the lowest preference so older servers keep working. A server that disables them is unaffected.
+
+### Recommended server settings
+
+<Note>
+  **Servers that work with AitriumOS today need no changes for 2.2.7.** AitriumOS 2.2.7 only adds algorithms and reorders its preferences; everything earlier versions could negotiate, including legacy `ssh-rsa` host keys and SHA-1 key exchange and MACs, is still accepted. The settings below are guidance for **new servers or when hardening** an existing one.
+</Note>
+
+When hardening, keep at least one algorithm from each row enabled so that **both Windows and macOS** workstations can connect:
+
+| Category | Keep at least one of |
+|---|---|
+| Key exchange | `diffie-hellman-group-exchange-sha256`, `diffie-hellman-group16-sha512`, `diffie-hellman-group18-sha512`, `diffie-hellman-group14-sha256` |
+| Host key | An **RSA host key**, preferably offered as `rsa-sha2-256` or `rsa-sha2-512` (legacy `ssh-rsa` is still accepted) |
+| Cipher | `chacha20-poly1305@openssh.com`, `aes256-ctr` or `aes128-ctr` |
+| MAC | `hmac-sha2-256` or `hmac-sha2-512`, with or without `-etm@openssh.com` (not needed if only `chacha20-poly1305@openssh.com` is offered) |
+
+<Warning>
+  **Windows workstations need an RSA host key and an AES-CTR or ChaCha20 cipher.** A server with only an Ed25519 or ECDSA host key, only elliptic-curve key exchange, or only AES-GCM ciphers accepts macOS workstations but not Windows workstations. Windows workstations then report *The SFTP server's security settings aren't supported by this version of AitriumOS*.
+</Warning>
+
+### Changes in AitriumOS 2.2.7
+
+| | AitriumOS 2.2.6 | AitriumOS 2.2.7 |
+|---|---|---|
+| Encrypt-then-MAC (`hmac-sha2-256-etm@openssh.com`, `hmac-sha2-512-etm@openssh.com`) | Not supported | Supported |
+| `chacha20-poly1305@openssh.com` | Not supported | Supported |
+| AES-GCM | Not supported | Supported on macOS |
+| Preferred cipher | `aes256-ctr`, then `aes128-ctr` | `chacha20-poly1305@openssh.com`, `aes256-gcm@openssh.com`, `aes256-ctr`, `aes128-gcm@openssh.com`, `aes128-ctr`, where supported |
+| No algorithm in common | Generic connection error | *The SFTP server's security settings aren't supported by this version of AitriumOS* |
+
+A server that accepts **only** encrypt-then-MAC MACs requires AitriumOS 2.2.7 or later.
+
+## Authentication
+
+| Method | Support |
+|---|---|
+| **Password** | Supported (SSH `password` method). |
+| **Private key** | Supported (SSH `publickey` method) with an **RSA** key, optionally protected by a passphrase. If both a key and a password are configured, the key is used. |
+| **Keyboard-interactive** | Not supported. A server that offers only `keyboard-interactive`, as some PAM-based setups do, rejects AitriumOS. Enable `password` or `publickey` for the trial's account. |
+| **Multi-factor sign-in** | Not supported. The trial's account must be able to sign in with a single password or key. |
+
+**RSA key signatures.** AitriumOS signs RSA key logins with `rsa-sha2-512` or `rsa-sha2-256`. A server that accepts **only** the legacy `ssh-rsa` signature for key logins works if it advertises that restriction to clients (OpenSSH 9.7 or later does); on older servers, also accept `rsa-sha2-256` or `rsa-sha2-512` in `PubkeyAcceptedAlgorithms`.
+
+**Private key formats.** PEM (`-----BEGIN RSA PRIVATE KEY-----`) works on every platform and is the recommended format. OpenSSH format (`-----BEGIN OPENSSH PRIVATE KEY-----`) is also accepted. On Windows, AitriumOS converts an OpenSSH-format key with the `ssh-keygen` tool from Windows' **OpenSSH Client** feature, so each site's workstation needs that feature installed. PuTTY `.ppk` keys are not accepted; export them in OpenSSH format with PuTTYgen first.
+
+Credentials are configured by the trial organization and delivered encrypted to authorized site users. Sites do not enter or hold them. See [Transfer credentials](/security/aitrium-os/data-flows#transfer-credentials).
+
+## Traffic your server will see
+
+| Traffic | What happens | How often |
+|---|---|---|
+| **Upload** | Sign-in, then SFTP transfer of the prepared, de-identified dataset. | Each submission. On a network failure, AitriumOS tries to connect up to three times, 2 and then 4 seconds apart. A rejected sign-in is not retried. |
+| **Delivery check** | After each upload, AitriumOS reads the uploaded file's size on the server to confirm delivery. A full read-back with a SHA-256 comparison can be enabled per integration on request. | Each upload. |
+| **Reachability check** (from 2.2.6) | Connection, SSH identification and key exchange only, then disconnect with the reason `AitriumOS reachability check`. **No sign-in, no SFTP session, no data.** | At most once a day per workstation and destination, at a randomized time, and skipped after a successful upload or connection test in the last 24 hours. Also before a workstation's first submission to your server (at most once an hour), and when a site user selects **Check now**. |
+| **Connection test** | Sign-in with the trial's credentials, without transferring data. | Automatically when a site user opens the trial, at most 4 times per 24 hours per workstation and destination. A success is reused for 24 hours. After a rejected sign-in there are no automatic retries. Site users can also start a test. |
+
+<Info>
+  Many workstations at one hospital can share a single public IP address. The limits above apply per workstation, so intrusion-prevention or ban rules (for example fail2ban) should allow for several workstations connecting from one address.
+</Info>
+
+The delivery check needs the trial's account to be able to read the attributes of files it has uploaded. The full read-back also needs read access to those files.
+
+## Troubleshooting from the server side
+
+- **Connection closes after the key exchange, before sign-in, with the reason `AitriumOS reachability check`:** this is the handshake-only check working as designed.
+- **"No matching" key exchange, host key, cipher or MAC in your server log:** compare your server's enabled algorithms with [Recommended server settings](#recommended-server-settings). Tell sites to update to AitriumOS 2.2.7 if your server accepts only encrypt-then-MAC MACs or only ChaCha20.
+- **No connection attempt in your log while a site reports "No response" or "refused the connection":** the traffic is blocked before it reaches your server, by the site's outbound firewall or your own address restrictions.
+
+For compatibility questions, contact [support@aitriumos.com](mailto:support@aitriumos.com).

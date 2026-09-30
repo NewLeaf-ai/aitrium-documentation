@@ -3,6 +3,10 @@ title: "Corporate HTTP proxy"
 description: "Configure and validate AitriumOS with a corporate HTTP proxy, including Windows Integrated Authentication, NTLMv2, and Basic authentication."
 ---
 
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Site IT" />
+
 AitriumOS connects through your organization's HTTP proxy to reach its HTTPS services. It supports proxies with no authentication, Windows Integrated Authentication (NTLMv2/Negotiate), and Basic authentication.
 
 <Note>
@@ -80,9 +84,17 @@ Sign out of Windows and back in, or restart the workstation, so newly launched a
 
 - Permit the required HTTPS destinations through the proxy. See the [destination allowlist](/security/aitrium-os/data-flows#firewall-allowlist).
 - If your proxy performs TLS inspection, install your organization's inspection CA in the Windows certificate store according to your policy.
-- Permit trial-specific SFTP/FTP connections separately. These transfers do not use the HTTP proxy; see [transfer destinations](/security/aitrium-os/data-flows#transfer-to-the-investigator).
+- Permit trial-specific SFTP/FTP connections separately. See [SFTP transfers bypass the proxy](#sftp-transfers-bypass-the-proxy).
 
 Configuring a proxy does not enforce a workstation-wide ban on direct traffic. Keep your firewall policy in place and verify routing during the Acceptance Test.
+
+### SFTP transfers bypass the proxy
+
+<Warning>
+  **The proxy applies to AitriumOS's HTTPS traffic only.** The SFTP transfer of the prepared dataset to the trial's server always connects **directly** from the workstation, on the trial's configured port (usually TCP 22). It cannot be sent through an HTTP proxy, and a proxy or PAC setting has no effect on it.
+</Warning>
+
+On a network that blocks direct outbound traffic, add a firewall exception for the trial's SFTP host and port, and allow the AitriumOS program `NewLeaf.exe` rather than only the port. The host and port are listed in **Settings → Network → Upload destinations**, where **Check now** confirms the connection. See [transfer destinations](/security/aitrium-os/data-flows#transfer-to-the-investigator) and [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting).
 
 ## Authentication and credential protection
 
@@ -200,7 +212,7 @@ Follow these steps on a managed Windows workstation using your organization's in
     - **Test connection** reports success.
   </Step>
   <Step title="Check online features">
-    Confirm that projects and integration status refresh, the application update check succeeds, and a test submission reaches its configured destination.
+    Confirm that projects and integration status refresh and the application update check succeeds. In **Settings → Network → Upload destinations**, select **Check now** for each trial's SFTP server and confirm it shows **Reachable**; then confirm a test submission reaches its configured destination.
   </Step>
   <Step title="Verify network policy">
     With your intended firewall restrictions active, confirm in proxy or firewall logs that Aitrium HTTPS traffic uses the approved proxy. If a temporary direct-HTTPS exception was granted, disable it for this test while retaining required SFTP/FTP access.
