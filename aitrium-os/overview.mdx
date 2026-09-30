@@ -31,7 +31,7 @@ There are two quick checks before installing AitriumOS — one you can do yourse
 
 **2. Forward the requirements below to your IT team**
 
-Most hospital networks restrict which applications can be installed and which network connections are allowed. You do not need to understand or check these items yourself — send this page to your IT team and ask them to confirm each item for the computer you will use.
+Most hospital networks restrict which applications can be installed and which network connections are allowed. You do not need to understand or check these items yourself — send this page to your IT team and ask them to confirm each item for the computer you will use. The full IT guide is the [IT setup checklist](/aitrium-os/it-setup).
 
 <Note>
   **For IT staff — requirements for AitriumOS (clinical trial data submission application):**
@@ -42,7 +42,7 @@ Most hospital networks restrict which applications can be installed and which ne
   - **Data upload** — for trials that transfer data over SFTP, outbound SFTP/SSH (TCP, usually port 22) from the workstation directly to the trial's SFTP server. This connection **cannot go through a web (HTTP) proxy**, so outbound firewall rules must permit it. Allow the **program** `NewLeaf.exe` (`C:\Program Files\AitriumOS\` for the MSI installer, `%LOCALAPPDATA%\AitriumOS\` for the standard installer), not just the port. The host and port are listed in AitriumOS under **Settings → Network → Upload destinations**.
   - **Trial SFTP servers that restrict IP addresses** — the trial's server sees the site's **public egress IP address**. If the trial organization only accepts approved addresses, send them that address.
 
-  Details: [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting).
+  Details: [IT setup checklist](/aitrium-os/it-setup) and [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting).
 </Note>
 
 #### How you'll know: "Can't reach Aitrium"

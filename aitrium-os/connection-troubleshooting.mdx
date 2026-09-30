@@ -117,6 +117,8 @@ These appear when an upload fails and in the trial dashboard's transfer status. 
 
 ## For site IT: allowing the connection
 
+This section covers the SFTP upload only. For the rest of the workstation setup, including the HTTPS allowlist and proxy, see the [IT setup checklist](/aitrium-os/it-setup). If you operate the trial's SFTP server rather than the site's network, see [SFTP server compatibility](/security/aitrium-os/sftp-compatibility).
+
 - **Allow outbound TCP to the host and port** shown in **Upload destinations**. The connection goes directly from the workstation. It cannot go through a web (HTTP) proxy.
 - **Allow the program, not just the port.** Endpoint-security products and per-application firewall rules often block one program while allowing another. Allow the AitriumOS executable:
   - Windows, per-machine (MSI) install: `C:\Program Files\AitriumOS\NewLeaf.exe`

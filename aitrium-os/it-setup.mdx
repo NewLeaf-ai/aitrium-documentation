@@ -1,0 +1,53 @@
+---
+title: "IT setup checklist"
+description: "What a site's IT team needs to install, allow, and validate so clinical staff can submit trial data with AitriumOS."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Site IT" />
+
+AitriumOS is the desktop application that clinical staff at your site use to prepare and submit patient data to clinical trials. Validation, standardization, and **de-identification** run on the workstation; the prepared dataset is then sent directly to the trial's destination.
+
+This page is the starting point for the IT team that installs and supports AitriumOS. Work through the steps below for each workstation, then confirm the result from inside the application.
+
+<Steps>
+  <Step title="Install AitriumOS">
+    AitriumOS runs on Windows 10/11 (64-bit) and macOS. On Windows, choose between the **MSI** installer (per-machine, for IT-deployed fleets) and the **Standard** installer (per-user, no administrator rights). Install only one type per workstation.
+
+    - IT facts — requirements, installer options, and how updates are delivered: [Deployment & updates](/security/aitrium-os/deployment)
+    - User walkthrough with screenshots: [Installing AitriumOS](/aitrium-os/overview#installing-aitriumos) and [Switching Windows installer types](/aitrium-os/overview#switching-windows-installer-types)
+  </Step>
+  <Step title="Allow outbound HTTPS to Aitrium">
+    Permit outbound HTTPS (TCP 443) to the destinations in the [firewall allowlist](/security/aitrium-os/data-flows#firewall-allowlist). The most important is `api.aitriumos.com`: without it, users can sign in but no trials load and no data can be submitted.
+  </Step>
+  <Step title="Configure your corporate proxy, if you use one">
+    AitriumOS reaches its HTTPS services through a corporate HTTP proxy, including proxies that use Windows Integrated Authentication or Basic authentication. See [Corporate HTTP proxy](/security/aitrium-os/proxy-configuration).
+  </Step>
+  <Step title="Allow the direct SFTP upload">
+    For trials that transfer data over SFTP, the upload goes directly from the workstation to the trial's server and **cannot go through a web proxy**. Allow the program `NewLeaf.exe`, not just the port, and send your site's public egress IP address to the trial organization if its server restricts addresses. See [For site IT: allowing the connection](/aitrium-os/connection-troubleshooting#for-site-it-allowing-the-connection).
+  </Step>
+  <Step title="Check endpoint protection">
+    AitriumOS is code-signed and runs in the user's context. If your EDR or antivirus needs an exception, allow it by publisher, install path, or executable. See [Build integrity & validation](/security/aitrium-os/validation).
+  </Step>
+  <Step title="Validate from inside AitriumOS">
+    Browser and command-line tests do not prove the application can connect. On the workstation, open **Settings → Network**: it lists each Aitrium service with its status, and **Upload destinations → Check now** tests each trial's SFTP server without signing in or sending data. For what each message means, see [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting).
+  </Step>
+</Steps>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Security review" icon="shield-check" href="/security/aitrium-os/overview">
+    Architecture, data flows and residency, and access management for your Information Security team.
+  </Card>
+  <Card title="Getting started (for users)" icon="square-terminal" href="/aitrium-os/overview">
+    The page clinical staff follow to install AitriumOS and sign in.
+  </Card>
+</CardGroup>
+
+<Note>
+  Operate the SFTP server that receives a trial's data? That is the trial organization's IT team: see [SFTP server compatibility](/security/aitrium-os/sftp-compatibility).
+</Note>
+
+For help, contact [support@aitriumos.com](mailto:support@aitriumos.com).
