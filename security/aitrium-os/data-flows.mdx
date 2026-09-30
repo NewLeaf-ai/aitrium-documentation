@@ -41,8 +41,8 @@ Permit outbound **HTTPS (TCP 443)** to the following destinations:
 | `api.aitriumos.com` | Core Aitrium API (trials, policies, dataset records) | **Submissions blocked** — trials and patient data will not load |
 | `app.aitriumos.com` | Web sign-in and installer downloads | Sign-in and installer downloads blocked |
 | `*.googleapis.com`, `*.firebaseapp.com`, `oauth2.googleapis.com` | User authentication (Google Firebase Authentication) | **Sign-in blocked** |
-| `rt-plan-standardizer-api-336813653216.us-central1.run.app` | Radiotherapy structure standardization — maps a dataset's structure names onto the trial's required structures | **Submissions containing RT structures fail partway through**, at the structure-mapping step. Sign-in and trial loading are unaffected, so a site that allows only the API will not notice until a submission is already under way. |
-| `audit-logging-microservice-336813653216.us-central1.run.app` | Regulatory audit trail of user and system actions | Audit events queue locally and are retried; they are not lost, but they do not reach Aitrium's audit store until the host is reachable. Submissions are unaffected. |
+| Structure-standardization service (Aitrium-operated; hostname provided on request) | Radiotherapy structure standardization — maps a dataset's structure names onto the trial's required structures | **Submissions containing RT structures fail partway through**, at the structure-mapping step. Sign-in and trial loading are unaffected, so a site that allows only the API will not notice until a submission is already under way. |
+| Audit-logging service (Aitrium-operated; hostname provided on request) | Regulatory audit trail of user and system actions | Audit events queue locally and are retried; they are not lost, but they do not reach Aitrium's audit store until the host is reachable. Submissions are unaffected. |
 | `storage.googleapis.com` | Application updates (and any Google Cloud Storage transfer you configure) | App updates unavailable — submissions unaffected |
 
 <Note>
@@ -54,7 +54,7 @@ Permit outbound **HTTPS (TCP 443)** to the following destinations:
 </Warning>
 
 <Note>
-  The structure-standardization and audit-logging destinations are Aitrium-operated services on Google Cloud Run (HTTPS/443). If your release uses different endpoints, your IT team is told which ones: [support@aitriumos.com](mailto:support@aitriumos.com).
+  The structure-standardization and audit-logging services are Aitrium-operated services on Google Cloud (HTTPS/443). Their hostnames are provided on request: contact [support@aitriumos.com](mailto:support@aitriumos.com). **Settings → Network** in AitriumOS also lists each service with its status.
 </Note>
 
 <Tip>
@@ -65,11 +65,19 @@ Permit outbound **HTTPS (TCP 443)** to the following destinations:
 
 | Destination | Purpose | Notes |
 |---|---|---|
-| Investigator's SFTP/FTP endpoint | Transfer of the prepared dataset | Host, port (typically TCP 22), and credentials are set by the investigator/sponsor organization — not entered or stored by your Site. The transfer connects directly from the workstation to the investigator and does not route through Aitrium. |
+| Investigator's SFTP/FTP endpoint | Transfer of the prepared dataset | Host, port (typically TCP 22), and credentials are set by the investigator's organization — not entered or stored by your Site. The transfer connects directly from the workstation to the investigator and does not route through Aitrium. AitriumOS shows the host and port under **Settings → Network → Upload destinations**. |
+
+Allowing this connection differs from the HTTPS destinations above:
+
+- **No proxy.** The SFTP transfer always connects directly from the workstation. It cannot be routed through a web (HTTP) proxy, so the workstation's firewall must permit outbound TCP to the investigator's host and port.
+- **Allow the program, not just the port.** Endpoint-security and per-application firewall rules can block AitriumOS while allowing other programs on the same port. Allow the executable `NewLeaf.exe`: `C:\Program Files\AitriumOS\NewLeaf.exe` for the per-machine (MSI) installer, or `%LOCALAPPDATA%\AitriumOS\NewLeaf.exe` for the per-user installer.
+- **Validate from AitriumOS.** A successful `ssh`, `sftp` or `Test-NetConnection` from the same workstation only shows that the port is open for that program. Use **Settings → Network → Upload destinations → Check now**, which tests the connection AitriumOS itself uses without signing in or transferring data.
 
 <Info>
-  The transfer originates from the **workstation's own outbound IP address**. If the investigator's SFTP server restricts sources by IP, allow the workstation's egress IP — there is no fixed Aitrium relay address.
+  The transfer originates from the **site's public egress IP address**. If the investigator's SFTP server restricts sources by IP, give the investigator's organization that address — there is no fixed Aitrium relay address.
 </Info>
+
+See [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting) for what each connection message means, and [SFTP server compatibility](/security/aitrium-os/sftp-compatibility) for the SSH algorithms and authentication methods AitriumOS supports.
 
 ## Data residency — where patient data lives
 

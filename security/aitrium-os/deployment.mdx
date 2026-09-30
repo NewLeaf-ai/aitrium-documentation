@@ -24,6 +24,17 @@ For installation, sign-in, and update walkthroughs with screenshots, see [Gettin
 
 Download the current release after signing in at [app.aitriumos.com](https://app.aitriumos.com) → **Downloads**. (Specific version binaries and their hashes can be provided for change-control purposes — see [Build integrity & validation](/security/aitrium-os/validation).)
 
+## Firewall and endpoint-security rules
+
+Where endpoint-security products or per-application firewall rules control which programs may connect, allow the AitriumOS executable, `NewLeaf.exe`:
+
+| Installer | Executable |
+|---|---|
+| **MSI** (per-machine) | `C:\Program Files\AitriumOS\NewLeaf.exe` |
+| **NSIS** (per-user) | `%LOCALAPPDATA%\AitriumOS\NewLeaf.exe` |
+
+This matters most for the SFTP transfer to the investigator. It connects directly from the workstation and cannot use a web proxy, so a rule that blocks the program blocks the transfer even when the port is open. AitriumOS reports this case as **Blocked by a firewall** or **Blocked from connecting**. See [Data flows & residency](/security/aitrium-os/data-flows#transfer-to-the-investigator) for the destinations and [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting) for how to validate the connection.
+
 ## Updates
 
 - **Integrity.** Every update package is **cryptographically signed and verified before it is applied**; a package that fails verification is rejected. Windows binaries are code-signed; macOS binaries are signed and notarized.
