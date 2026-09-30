@@ -39,6 +39,7 @@
             "icon": "square-terminal",
             "pages": [
               "aitrium-os/overview",
+              "aitrium-os/connection-troubleshooting",
               "aitrium-os/no-protocol-submissions",
               "aitrium-os/protocol-submissions"
             ]
@@ -96,6 +97,7 @@
               "security/aitrium-os/architecture",
               "security/aitrium-os/data-flows",
               "security/aitrium-os/proxy-configuration",
+              "security/aitrium-os/sftp-compatibility",
               "security/aitrium-os/access-management",
               "security/aitrium-os/deployment",
               "security/aitrium-os/validation"

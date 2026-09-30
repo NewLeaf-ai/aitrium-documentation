@@ -1,0 +1,142 @@
+---
+title: "Upload connection troubleshooting"
+description: "Check whether AitriumOS can reach a trial's SFTP server, and what each upload connection message means."
+---
+
+## How uploads connect
+
+For trials that transfer data over SFTP, AitriumOS sends the prepared, de-identified dataset **directly from the workstation** to the trial's SFTP server. It connects on the port the trial organization configured, usually TCP 22.
+
+- **This connection does not use a web (HTTP) proxy.** A corporate proxy handles AitriumOS's HTTPS traffic to Aitrium only. The workstation must be allowed to open the SFTP connection itself.
+- **It is separate from the "Can't reach Aitrium" check.** AitriumOS can connect to Aitrium normally while the trial's SFTP server is still blocked, so check both.
+- **The trial's SFTP server sees the site's public IP address**, not Aitrium's. Some trial organizations only accept connections from addresses they have approved. See [If the trial's server restricts IP addresses](#if-the-trials-server-restricts-ip-addresses).
+
+## Check an upload destination
+
+Open **Settings → Network** in AitriumOS. The **Upload destinations** list shows each SFTP server your trials send data to, with its host and port, the latest result and when it was checked.
+
+Select **Check now** to test a destination immediately. You can check again 10 seconds after the previous check finishes.
+
+<Note>
+  A destination appears once you have access to a trial that sends data by SFTP. Until then the list shows **No upload destinations yet**.
+</Note>
+
+### What a check does
+
+A check is a **handshake only**. AitriumOS looks up the server's address, opens a connection, confirms the server answers as an SSH server and agrees on encryption with it, then disconnects.
+
+A check **never signs in, never uses the trial's credentials and never transfers data**. On the trial organization's server it appears as a short connection that normally ends with the disconnect reason `AitriumOS reachability check`.
+
+### Automatic checks
+
+From AitriumOS 2.2.6, destinations are also checked automatically:
+
+- **Daily.** While AitriumOS is open, each destination is checked at most once a day per workstation, at a randomized time. The daily check is skipped when an upload or a connection test to that destination succeeded in the last 24 hours, because that already proved the connection works.
+- **Before a first submission.** When you open a submission to a destination this workstation has never uploaded to, AitriumOS checks it, unless it was checked in the last hour.
+- **No automatic retries.** A failed automatic check is not repeated until the next day. Select **Check now** after IT makes a change.
+
+Aitrium can pause automatic checks. **Check now** always runs.
+
+### Who else sees the result
+
+AitriumOS reports the latest result for each destination to Aitrium. The report includes the destination's host and port, the result and when it was checked, plus the negotiated encryption algorithms and the server's host key fingerprint after a successful check. It never includes credentials, patient data, file names, the workstation's IP address or proxy details.
+
+These results appear in site readiness, so your organization's administrators, the trial organization and Aitrium support can see when a destination is blocked. See [Upload destination reachability](/aitrium-admin/integrations#upload-destination-reachability).
+
+### Transfer status on the trial dashboard
+
+The trial dashboard header shows the trial's data transfer status: **Transfer connected**, **Transfer failed** or **Not checked yet**. This is a full connection test: unlike a reachability check, it signs in with the trial's credentials, but it transfers no data. Hover over the status to see the message and when it was checked, and select it to test again.
+
+## What the messages mean
+
+### Upload destinations list
+
+The examples below use `sftp.example.org` and port `22`; AitriumOS shows your destination's host and port. On macOS, messages name **AitriumOS** instead of **AitriumOS (NewLeaf.exe)**.
+
+| Message | What it means | Who acts |
+|---|---|---|
+| **Reachable** | The server answered and the handshake completed. | No action needed. |
+| **Not yet checked** | No check has run on this workstation yet. | Select **Check now**. |
+| **Blocked by a firewall — ask IT to allow outbound TCP 22 to sftp.example.org for AitriumOS (NewLeaf.exe)** | The computer refused to let AitriumOS open the connection. A firewall or endpoint-security rule on the workstation or its network is blocking this program. | Site IT: allow the connection for the program. See [Allowing the connection](#for-site-it-allowing-the-connection). |
+| **No response from sftp.example.org:22 — ask IT to allow outbound TCP 22 to sftp.example.org for AitriumOS (NewLeaf.exe)** | Nothing answered. Usually a firewall is silently dropping the traffic, either the site's outbound firewall or the trial server's IP restrictions. | Site IT first. If the site's firewall allows the connection, the trial organization must approve the site's [public IP address](#if-the-trials-server-restricts-ip-addresses). |
+| **Unreachable — sftp.example.org:22 refused the connection** | The server, or a device in front of it, actively refused the connection. Typically nothing is listening on that port, or the server's firewall rejects the site's address. | Trial organization: confirm the host and port, and approve the site's public IP address if they restrict addresses. |
+| **Can't connect to sftp.example.org:22 — ask IT to allow outbound TCP 22 to sftp.example.org for AitriumOS (NewLeaf.exe)** | The connection failed for another network reason, for example no route to the server. | Site IT. |
+| **Unreachable — sftp.example.org could not be found** | The server's name could not be resolved. | Site IT: confirm the workstation can resolve external names. If the name itself is wrong, the trial organization corrects it. |
+| **No SFTP response — ask IT to allow outbound sftp.example.org:22** | The connection opened, but no SSH server answered. Something between the workstation and the server accepted the connection instead, such as a proxy, a TLS-inspection device or an application-aware firewall that only allows web traffic, or the port is not an SFTP port. | Site IT. If nothing on the site's network intercepts the traffic, the trial organization confirms the port. |
+| **Secure connection could not be set up — contact Aitrium support** | The server answered as an SSH server, but AitriumOS and the server could not agree on security settings. | Contact [Aitrium support](mailto:support@aitriumos.com). The trial organization can compare its server settings with [SFTP server compatibility](/security/aitrium-os/sftp-compatibility). |
+| **Check did not complete** | The check stopped because of a local error. | Select **Check now** again. If it persists, contact support. |
+| **Blocked — ask IT to allow outbound sftp.example.org:22** | Network blocked. AitriumOS 2.2.6 shows this for both firewall blocks and unanswered connections. | Site IT, as for the two messages above. |
+
+<Note>
+  AitriumOS 2.2.7 separates results that 2.2.6 grouped together. In 2.2.6, a firewall block and an unanswered connection both show **Blocked — ask IT to allow outbound …**, and any connection failure other than a missing name shows **Unreachable — … refused the connection**.
+</Note>
+
+### Upload and connection test messages
+
+These appear when an upload fails and in the trial dashboard's transfer status. The transfer status shows the full message right after a test, and a one-line summary for a stored result, for example *The server could not be reached from this workstation.*
+
+<AccordionGroup>
+  <Accordion title="Blocked from connecting to sftp.example.org:22 … Ask IT to allow outbound TCP 22 to sftp.example.org for AitriumOS (NewLeaf.exe).">
+    **From AitriumOS 2.2.7.** The workstation, or security software on it, refused to let AitriumOS open the connection. Another program on the same computer may still be allowed. Site IT should allow outbound TCP to that host and port **for the AitriumOS program**, not only for the port. See [Allowing the connection](#for-site-it-allowing-the-connection).
+  </Accordion>
+  <Accordion title="No response from sftp.example.org:22 within 20s (TCP connect) …">
+    Nothing answered the connection within 20 seconds. The message continues: the host never answered, which usually means a firewall or network policy is blocking the outbound port. Check the site's outbound firewall first, then ask the trial organization whether their server only accepts approved IP addresses.
+  </Accordion>
+  <Accordion title="No response from sftp.example.org:22 within 30s (SSH handshake) …">
+    The connection opened, but the secure handshake and sign-in did not finish within 30 seconds. A device between the workstation and the server may be holding the connection open without passing SSH traffic, or the server may be very slow to respond. Site IT should check for proxies or inspection devices on the path. If there are none, contact the trial organization.
+  </Accordion>
+  <Accordion title="Unable to connect to the SFTP server: the connection was refused or could not be made. Verify the host, port, and network access.">
+    The connection could not be opened: the server refused it, or the network could not reach the server. Use **Settings → Network → Upload destinations → Check now** for a more specific result.
+  </Accordion>
+  <Accordion title="The SFTP server's security settings aren't supported by this version of AitriumOS. Please update AitriumOS or contact Aitrium support.">
+    **From AitriumOS 2.2.7.** The server answered, but it and AitriumOS have no SSH algorithms in common. The host, port and network are working. Update AitriumOS if an update is available, and contact [Aitrium support](mailto:support@aitriumos.com). The trial organization can check its server against [SFTP server compatibility](/security/aitrium-os/sftp-compatibility).
+
+    Earlier versions show the generic message *Unable to connect to the SFTP server. Verify the host, port, and network access.* for this case.
+  </Accordion>
+  <Accordion title="Authentication failed. Verify the configured username and credentials.">
+    The server did not accept the account. Your site does not hold these credentials: the trial organization configures them, so ask them to check the account. The trial dashboard summarizes this as *The server did not accept the account.* After a rejected sign-in, AitriumOS does not retry automatically; select the transfer status to test again once the trial organization has fixed the account.
+  </Accordion>
+  <Accordion title="Failed to fetch site integration credentials … / Transfer credentials are not available yet.">
+    AitriumOS could not obtain the trial's transfer credentials, so no SFTP server was contacted. Usually your access to the trial or a required training has not been confirmed yet. Check the trial's requirements, or ask the trial organization.
+  </Accordion>
+  <Accordion title="OpenSSH format detected but ssh-keygen is not available for conversion.">
+    **Windows, key-based sign-in only.** The trial uses a private key in OpenSSH format, which AitriumOS converts on Windows with the `ssh-keygen` tool from Windows' **OpenSSH Client** optional feature. Site IT can add **OpenSSH Client** under **Optional features** in Windows Settings, or the trial organization can supply the key in PEM format.
+  </Accordion>
+  <Accordion title="PuTTY PPK format is not supported …">
+    The trial's private key is in PuTTY's `.ppk` format. The trial organization must export it in OpenSSH format with PuTTYgen and update the credentials.
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+  During an upload, AitriumOS tries to connect up to three times, 2 and then 4 seconds apart, before the upload fails. The final message then ends with *(failed after 3 connection attempts)*. A rejected sign-in or unsupported security settings fail immediately, because retrying cannot change the result.
+</Info>
+
+## For site IT: allowing the connection
+
+- **Allow outbound TCP to the host and port** shown in **Upload destinations**. The connection goes directly from the workstation. It cannot go through a web (HTTP) proxy.
+- **Allow the program, not just the port.** Endpoint-security products and per-application firewall rules often block one program while allowing another. Allow the AitriumOS executable:
+  - Windows, per-machine (MSI) install: `C:\Program Files\AitriumOS\NewLeaf.exe`
+  - Windows, per-user (Standard) install: `%LOCALAPPDATA%\AitriumOS\NewLeaf.exe`
+  - macOS: the **AitriumOS** application
+- **If the host name has several addresses,** such as an IPv6 and an IPv4 address, AitriumOS 2.2.7 tries each in turn within one time budget. A blocked IPv6 address therefore no longer stops an upload when the IPv4 address works. Allow every address you intend the workstation to use.
+- **Confirm with AitriumOS itself.** Run **Settings → Network → Upload destinations → Check now** on the workstation after each change.
+
+<Warning>
+  **Testing from another program does not prove AitriumOS can connect.** A successful `ssh`, `sftp` or `Test-NetConnection` from the same computer shows the port is open for *that* program. Security software can still block AitriumOS, or intercept the connection, on the same port. Use **Check now** to test the path AitriumOS actually uses.
+</Warning>
+
+### If the trial's server restricts IP addresses
+
+Some trial organizations only accept SFTP connections from IP addresses they have approved. The trial's server sees your site's **public egress IP address**: the address your network's traffic leaves from, often shared by many workstations. It does not see the workstation's internal address, and there is no Aitrium relay address to approve.
+
+Ask your network team for the public egress IP address, or addresses, used by the workstations running AitriumOS, and send them to the trial organization. A **No response** or **refused the connection** result that persists after your own firewall allows the connection usually means the address has not been approved yet.
+
+## Getting help
+
+Contact [support@aitriumos.com](mailto:support@aitriumos.com) with:
+
+- The exact message, and the result of **Check now**
+- Your AitriumOS version, shown in the application header
+- What IT has already allowed, for example the program, the host and port, and whether the trial organization has approved your public IP address
+
+Do not send passwords, private keys or unredacted logs by email.
