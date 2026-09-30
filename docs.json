@@ -7,7 +7,7 @@
     "light": "#2684FF",
     "dark": "#0052CC"
   },
-  "fonts":{
+  "fonts": {
     "family": "Reddit Sans"
   },
   "icons": {
@@ -25,27 +25,63 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
-        "icon": "book-open",
+        "tab": "Home",
+        "icon": "house",
         "groups": [
           {
-            "group": "Get Started",
+            "group": "Welcome",
             "pages": [
               "introduction"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "tab": "For Sites",
+        "icon": "hospital",
+        "groups": [
           {
-            "group": "AitriumOS",
+            "group": "Get started",
             "icon": "square-terminal",
             "pages": [
-              "aitrium-os/overview",
-              "aitrium-os/connection-troubleshooting",
-              "aitrium-os/no-protocol-submissions",
-              "aitrium-os/protocol-submissions"
+              "aitrium-os/overview"
             ]
           },
           {
-            "group": "Trial Accelerator",
+            "group": "Submitting data",
+            "icon": "upload",
+            "pages": [
+              "aitrium-os/no-protocol-submissions",
+              "aitrium-os/protocol-submissions",
+              {
+                "group": "Training",
+                "icon": "graduation-cap",
+                "pages": [
+                  "training/basic-submission",
+                  "training/rtqa-submission"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "IT & network",
+            "icon": "monitor-cog",
+            "pages": [
+              "aitrium-os/it-setup",
+              "security/aitrium-os/deployment",
+              "security/aitrium-os/proxy-configuration",
+              "aitrium-os/connection-troubleshooting",
+              "security/aitrium-os/validation"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "For Trial Organizations",
+        "icon": "building-2",
+        "groups": [
+          {
+            "group": "Set up a trial",
             "icon": "component",
             "pages": [
               "trial-accelerator/overview",
@@ -54,27 +90,21 @@
             ]
           },
           {
-            "group": "Aitrium Admin",
+            "group": "Organization administration",
             "icon": "settings",
             "pages": [
               "aitrium-admin/overview",
               "aitrium-admin/user-management",
               "aitrium-admin/network-management",
-              "aitrium-admin/audit-logging",
-              "aitrium-admin/integrations"
+              "aitrium-admin/integrations",
+              "aitrium-admin/audit-logging"
             ]
-          }
-        ]
-      },
-      {
-        "tab": "Training",
-        "icon": "graduation-cap",
-        "groups": [
+          },
           {
-            "group": "Data Submission Training",
+            "group": "SFTP server (for your IT)",
+            "icon": "server",
             "pages": [
-              "training/basic-submission",
-              "training/rtqa-submission"
+              "security/aitrium-os/sftp-compatibility"
             ]
           }
         ]
@@ -96,11 +126,7 @@
               "security/aitrium-os/overview",
               "security/aitrium-os/architecture",
               "security/aitrium-os/data-flows",
-              "security/aitrium-os/proxy-configuration",
-              "security/aitrium-os/sftp-compatibility",
-              "security/aitrium-os/access-management",
-              "security/aitrium-os/deployment",
-              "security/aitrium-os/validation"
+              "security/aitrium-os/access-management"
             ]
           }
         ]
@@ -114,6 +140,12 @@
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/newleaf-native/overview",
+      "destination": "/aitrium-os/overview"
+    }
+  ],
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
