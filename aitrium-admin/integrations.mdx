@@ -117,12 +117,25 @@ When an integration uses SFTP for data transfer, credential groups contain the f
 | **SFTP Username** | Yes | Authentication username |
 | **SFTP Password** | Yes | Authentication password |
 | **Root Directory** | No | Base directory path on the SFTP server. If omitted, the default directory is used. |
-| **Private Key (RSA)** | No | RSA private key for key-based authentication. Paste the full PEM-encoded key in OpenSSH format. ECDSA and PuTTY `.ppk` formats are not supported. |
+| **Private Key (RSA)** | No | RSA private key for key-based authentication. PEM format (`-----BEGIN RSA PRIVATE KEY-----`) is recommended and works on every workstation. OpenSSH format (`-----BEGIN OPENSSH PRIVATE KEY-----`) is also accepted, but Windows workstations then need the Windows **OpenSSH Client** feature installed. ECDSA and Ed25519 keys and PuTTY `.ppk` files are not supported. |
 | **Private Key Password** | No | Passphrase for the private key, if the key is encrypted. |
 
 <Note>
 When both password and private key are provided, key-based authentication takes precedence.
 </Note>
+
+The SFTP server must allow sign-in with a password or a public key; keyboard-interactive and multi-factor sign-in are not supported. Sites connect directly from their own network, so a server that restricts IP addresses must allow each site's public egress IP address. For supported SSH algorithms and the traffic your server will see, share [SFTP server compatibility](/security/aitrium-os/sftp-compatibility) with the server's IT team.
+
+### Upload destination reachability
+
+From AitriumOS 2.2.6, each installation checks whether it can reach its trials' SFTP servers and reports the latest result to Aitrium. The check is a handshake only: it never signs in or transfers data. Site users can run it from **Settings → Network → Upload destinations → Check now**; see [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting).
+
+The results feed site readiness in Aitrium Web:
+
+- **Organizations that own a site** see, under **Dashboard → Sites** → the site → **Readiness**, an **Upload destinations** section listing each trial's destination (host and port) with its latest check: **Reachable**, **Blocked**, **Check failed**, **Not yet tested** or **Not yet reported**. Installations older than AitriumOS 2.2.6 don't report. The same tab offers an IT checklist download.
+- **Trial organizations** see an **Upload server** status in each site's readiness for the trial, showing whether the site's upload connection is working or blocked.
+
+Only the destination, the result and when it was checked are reported, with the negotiated encryption algorithms and the server's host key fingerprint after a successful check. Credentials, patient data and workstation IP addresses are never reported.
 
 ---
 
