@@ -75,6 +75,8 @@ A server that accepts **only** encrypt-then-MAC MACs requires AitriumOS 2.2.7 or
 | **Keyboard-interactive** | Not supported. A server that offers only `keyboard-interactive`, as some PAM-based setups do, rejects AitriumOS. Enable `password` or `publickey` for the trial's account. |
 | **Multi-factor sign-in** | Not supported. The trial's account must be able to sign in with a single password or key. |
 
+**RSA key signatures.** AitriumOS signs RSA key logins with `rsa-sha2-512` or `rsa-sha2-256`. A server that accepts **only** the legacy `ssh-rsa` signature for key logins works if it advertises that restriction to clients (OpenSSH 9.7 or later does); on older servers, also accept `rsa-sha2-256` or `rsa-sha2-512` in `PubkeyAcceptedAlgorithms`.
+
 **Private key formats.** PEM (`-----BEGIN RSA PRIVATE KEY-----`) works on every platform and is the recommended format. OpenSSH format (`-----BEGIN OPENSSH PRIVATE KEY-----`) is also accepted. On Windows, AitriumOS converts an OpenSSH-format key with the `ssh-keygen` tool from Windows' **OpenSSH Client** feature, so each site's workstation needs that feature installed. PuTTY `.ppk` keys are not accepted; export them in OpenSSH format with PuTTYgen first.
 
 Credentials are configured by the trial organization and delivered encrypted to authorized site users. Sites do not enter or hold them. See [Transfer credentials](/security/aitrium-os/data-flows#transfer-credentials).
