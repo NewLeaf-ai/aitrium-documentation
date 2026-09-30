@@ -41,8 +41,8 @@ Permit outbound **HTTPS (TCP 443)** to the following destinations:
 | `api.aitriumos.com` | Core Aitrium API (trials, policies, dataset records) | **Submissions blocked** — trials and patient data will not load |
 | `app.aitriumos.com` | Web sign-in and installer downloads | Sign-in and installer downloads blocked |
 | `*.googleapis.com`, `*.firebaseapp.com`, `oauth2.googleapis.com` | User authentication (Google Firebase Authentication) | **Sign-in blocked** |
-| Structure-standardization service (Aitrium-operated; hostname provided on request) | Radiotherapy structure standardization — maps a dataset's structure names onto the trial's required structures | **Submissions containing RT structures fail partway through**, at the structure-mapping step. Sign-in and trial loading are unaffected, so a site that allows only the API will not notice until a submission is already under way. |
-| Audit-logging service (Aitrium-operated; hostname provided on request) | Regulatory audit trail of user and system actions | Audit events queue locally and are retried; they are not lost, but they do not reach Aitrium's audit store until the host is reachable. Submissions are unaffected. |
+| `rt-plan-standardizer-api-336813653216.us-central1.run.app` | Radiotherapy structure standardization — maps a dataset's structure names onto the trial's required structures | **Submissions containing RT structures fail partway through**, at the structure-mapping step. Sign-in and trial loading are unaffected, so a site that allows only the API will not notice until a submission is already under way. |
+| `audit-logging-microservice-336813653216.us-central1.run.app` | Regulatory audit trail of user and system actions | Audit events queue locally and are retried; they are not lost, but they do not reach Aitrium's audit store until the host is reachable. Submissions are unaffected. |
 | `storage.googleapis.com` | Application updates (and any Google Cloud Storage transfer you configure) | App updates unavailable — submissions unaffected |
 
 <Note>
@@ -54,7 +54,7 @@ Permit outbound **HTTPS (TCP 443)** to the following destinations:
 </Warning>
 
 <Note>
-  The structure-standardization and audit-logging services are Aitrium-operated services on Google Cloud (HTTPS/443). Their hostnames are provided on request: contact [support@aitriumos.com](mailto:support@aitriumos.com). **Settings → Network** in AitriumOS also lists each service with its status.
+  The structure-standardization and audit-logging destinations are Aitrium-operated services on Google Cloud Run (HTTPS/443). If your release uses different endpoints, your IT team is told which ones: [support@aitriumos.com](mailto:support@aitriumos.com). **Settings → Network** in AitriumOS also lists each service with its status.
 </Note>
 
 <Tip>
