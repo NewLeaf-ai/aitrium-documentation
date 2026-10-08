@@ -94,13 +94,13 @@ sudo -u aitrium-rtqa nano /opt/aitrium/rtqa/.env
 
 Plain `ls` does not show `.env`; use `ls -la`.
 
-### A changed data location is read-only to the services
+### A changed data location is read-only to the services, or the appliance looks empty
 
-A data location changed only in the wizard or `.env` is not added to the hardened units' writable paths. Run the installer again with the new `--state-dir`, `--received-dir`, or `--staging-dir`, then `aitrium-rtqa service install` and restart.
+A data location changed only in the wizard or `.env` is not added to the hardened units' writable paths, and changing a location never moves the data already there. Follow [Changing data locations](/rtqa-appliance/operations#changing-data-locations): stop, back up, move the contents as the service account, run the installer again with the new option, check, and start.
 
 ### Signed-in requests fail with `proxy_token_required`
 
-The UI server refused a request because the proxy's secret did not match. This happens between `aitrium-rtqa proxy-token rotate` and the restart. Run `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service restart`.
+The UI server refused a request because the proxy's secret did not match its own. Each service reads the secret when it starts, so this happens when only one of them restarted after `aitrium-rtqa proxy-token rotate`. Restart both: `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service restart`.
 
 ### The worker stops taking new work
 
@@ -112,7 +112,7 @@ These codes appear on a case's ingestion status in the worklist and in the worke
 
 | Code | Meaning | Fix |
 |---|---|---|
-| `input_sftp_host_key_changed` | The SFTP delivery host presented a different SSH key from the one recorded or pinned. The delivery is refused and not retried. | Verify the new fingerprint with the delivery provider over a channel you trust, then run `aitrium-rtqa sftp host-key accept`. See [SFTP delivery host keys](/rtqa-appliance/operations#sftp-delivery-host-keys). |
+| `input_sftp_host_key_changed` | The SFTP delivery host presented a different SSH key from the one recorded or pinned. The delivery is refused and not retried. | Verify the new fingerprint with the delivery provider over a channel you trust. For a key recorded on first use, run `aitrium-rtqa sftp host-key accept`. For a pinned host, `accept` refuses: update `RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT` and restart the services. See [SFTP delivery host keys](/rtqa-appliance/operations#sftp-delivery-host-keys). |
 | `input_storage_lock_unavailable` | The storage location does not support file locks. Not retried. | Move the state directory to local block storage. NFS needs v4, or v3 with `lockd`, mounted without `nolock` or `local_lock`. SMB needs a Linux 5.5 or newer client. |
 | `input_delivery_busy` | Another import of the same delivery held its lock too long (`RTQA_INGEST_LOCK_TIMEOUT_S`, default 300 s). Temporary, and retried. | Usually nothing. If it repeats, check the worker log. |
 
@@ -132,7 +132,7 @@ A reviewer sees *This case's imaging is being reclaimed under the retention poli
 | `services_running` | An appliance service is still running. Stop them with `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa stop --all`, then restore. If the command itself cannot run, see [Stopping the appliance when its CLI is broken](#stopping-the-appliance-when-its-cli-is-broken). |
 | `persistence_locked` | Another appliance command held the database lock. Wait for it to finish, or stop it, and try again. |
 | `persistence_lock_unavailable` | The lock file cannot be used (a full disk, a permission problem, or a file system without file locks). Fix the cause the message names. Until then, commands that may write the database refuse. |
-| `snapshot_schema_newer` | The backup was taken on a newer release than the one installed. Restore it with that release. |
+| `snapshot_schema_newer` | The backup's database schema is newer than the installed release's. Restore it with a release that has that schema. |
 | `state_dir_not_local` | The state directory is on a network or FUSE file system. Move it to local storage. Nothing was changed. |
 | `staging_failed` | Preparing the replacement failed, for example on a full disk. The live database is unchanged; the message gives the safety copy's path. |
 | `database_in_use` | Something still has the live database open. Find and stop it, then retry. |
@@ -157,7 +157,7 @@ systemctl is-active aitrium-rtqa-proxy aitrium-rtqa-ui aitrium-rtqa-worker aitri
 
 Every line must read `inactive`, or `unknown` for a unit this install does not have.
 
-**Without systemd,** identify each process before you signal it. A PID file can name a process that is no longer the appliance's.
+**Without systemd (Linux),** identify each process before you signal it. These steps read `/proc`, so they work on Linux only. A PID file can name a process that is no longer the appliance's.
 
 1. List the candidates with their command line, working directory, and appliance directories:
 
@@ -166,7 +166,7 @@ Every line must read `inactive`, or `unknown` for a unit this install does not h
    for pid in $(pgrep -f 'rtqa-appliance (ui serve|ui proxy|worker)|rtqa_appliance\.cli (ui serve|ui proxy|worker)|rtqa-start-(ui|proxy|worker)|llama-server'); do
      echo "== $pid: $(sudo tr '\0' ' ' < /proc/$pid/cmdline)"
      echo "   cwd: $(sudo readlink /proc/$pid/cwd)"
-     sudo tr '\0' '\n' < /proc/$pid/environ | grep -E '^RTQA_(WORK|STATE)_DIR=' | sed 's/^/   /'
+     sudo cat "/proc/$pid/environ" | tr '\0' '\n' | grep -E '^RTQA_(WORK|STATE)_DIR=' | sed 's/^/   /'
    done
    ```
 

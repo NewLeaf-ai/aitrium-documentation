@@ -21,7 +21,7 @@ It runs on a Linux x86_64 server or VM that your organization provides and secur
 
 <CardGroup cols={2}>
   <Card title="Raw DICOM stays on your host" icon="hard-drive">
-    Raw DICOM is never uploaded through the control-plane API. What the appliance sends Aitrium is restricted by a typed allow-list: case-linked derived results such as grades, counts, reason codes, and bounded measurement values. Two fields carry text a person types, and other paths are disclosed: the trial's SFTP and REDCap services, a remote model server if you configure one, and reviewer exports on workstations. Patient data is served `no-store`, so browsers keep no disk copy. See [Data flows](/security/rtqa-appliance/data-flows).
+    Raw DICOM is never uploaded through the control-plane API. What the appliance sends Aitrium is restricted by a typed allow-list: case-linked derived results such as grades, counts, reason codes, and bounded measurement values. Two fields carry text a person types, and other paths are disclosed: the trial's SFTP and REDCap services, a remote model server if you configure one, and reviewer exports on workstations. Patient-data responses forbid HTTP caching (`no-store`); see [Known limits](/security/rtqa-appliance/known-limits) for what that does not cover. See [Data flows](/security/rtqa-appliance/data-flows).
   </Card>
   <Card title="No AI model by default" icon="cpu">
     A default install (the review profile) contains no large-language-model component: no model weights, no llama.cpp binary, no model-server service, and no Hugging Face client library. `aitrium-rtqa components --json` reports what is actually present. An optional assistant can be added later. By default it runs on the appliance with a local model; a site can instead point it at a remote model server, which then receives the assistant's requests.
@@ -36,7 +36,7 @@ It runs on a Linux x86_64 server or VM that your organization provides and secur
     The appliance polls Aitrium for work. Aitrium has no inbound path to it. Expose only the HTTPS edge (443, and 80 for the redirect) to your network.
   </Card>
   <Card title="Only the proxy reaches the UI server" icon="key-round">
-    The internal UI server listens on loopback only and answers only requests carrying a secret that the reviewer proxy holds, so other local accounts cannot use it at all. SFTP delivery hosts are verified by their SSH host key before any credential is sent.
+    The internal UI server listens on loopback only and requires a secret that the reviewer proxy holds on every route except a data-free `GET /healthz`, so other local accounts cannot use it. SFTP delivery hosts are verified by their SSH host key before any credential is sent.
   </Card>
 </CardGroup>
 
@@ -75,7 +75,7 @@ It runs on a Linux x86_64 server or VM that your organization provides and secur
 | **Disk encryption** | Full-disk or volume encryption for the work directory (including `work/` and `logs/`), the review-state, received, staging, and model locations, and backups |
 | **TLS** | The edge certificate and key, and their renewal |
 | **Firewall** | Inbound: only the edge port(s). Outbound: the destinations in [Data flows](/security/rtqa-appliance/data-flows#egress-allowlist), plus the trial's SFTP host, its REDCap host if used, and a remote model server if configured. The appliance does not enforce an allowlist itself. |
-| **Workstations** | Protection of what reviewers' workstations hold: downloaded and printed reports, SQL console CSV exports, and images in an open review tab's memory (patient data is served `no-store`, so there is no disk cache copy). Disk encryption, print handling, managed devices, and a screen-lock policy. Serve the appliance over HTTPS so browsers act on its cache reset. A reverse proxy in front of the appliance must honor `no-store`, and should have the appliance's cached entries purged once after upgrading from an earlier release. |
+| **Workstations** | Protection of what reviewers' workstations hold: downloaded and printed reports, SQL console CSV exports, and images in an open review tab's memory (patient-data responses forbid HTTP caching with `no-store`; swap files, crash dumps, and browsers that ignore `no-store` remain outside that rule). Disk encryption, print handling, managed devices, and a screen-lock policy. Serve the appliance over HTTPS so browsers act on its cache reset. A reverse proxy in front of the appliance must honor `no-store`, and should have the appliance's cached entries purged once after upgrading from an earlier release. |
 | **Local accounts on the host** | Keep interactive accounts on the appliance host to administrators. Anything running as root or the service account can read the proxy's secret and call the UI server, and the local model server (assisted profile) has no authentication. |
 | **Outbound proxy** | Its address, credentials, and CA, if you use one |
 | **Time** | NTP or equivalent time synchronization |

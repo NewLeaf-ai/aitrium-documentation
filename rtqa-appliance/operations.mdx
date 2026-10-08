@@ -35,7 +35,7 @@ sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service status
 
 - `service start` and `service stop` include the TLS edge. `service restart` and `service status` cover the worker, UI server, and proxy (and the model server on the assisted profile), not the edge. For the edge, use `sudo systemctl restart aitrium-rtqa-ingress.service` and `sudo systemctl status aitrium-rtqa-ingress.service`.
 - After a configuration change, restart the services so they read the new `.env`.
-- When the units are installed, `aitrium-rtqa start` and `aitrium-rtqa stop` hand over to systemd. On a host without systemd, they run the services as background processes, with logs under `/opt/aitrium/rtqa/logs/`.
+- When the units are installed, `aitrium-rtqa start` and `aitrium-rtqa stop` hand over to systemd. On a host without systemd, they run the worker, UI server, and proxy (and the model server on the assisted profile) as background processes, with logs under `/opt/aitrium/rtqa/logs/`. Manual start needs the deployment values configured, and it does not run the TLS edge: manage HTTPS separately on such a host.
 
 ## Health and status
 
@@ -158,7 +158,7 @@ sudo /opt/aitrium/rtqa/bin/aitrium-rtqa start --all
 
 The restore works in this order:
 
-1. **Checks the backup, without changing anything:** its checksum, its integrity, the schema the file actually holds, and its complete migration history. A backup from a **newer** release than the one installed is refused; restore it with the release that took it. The state directory must be on local storage: a network or FUSE file system is refused before anything changes.
+1. **Checks the backup, without changing anything:** its checksum, its integrity, the schema the file actually holds, and its complete migration history. A backup whose database schema is **newer** than the installed release's, or whose migration history does not match, is refused; restore it with a release that has that schema. (The check is on the database schema, not the release number: a backup from a newer release with the same schema is accepted.) The state directory must be on local storage: a network or FUSE file system is refused before anything changes.
 2. **Checks that nothing is running.** It refuses while this appliance's systemd units are active or any of its UI server, proxy, or worker processes are running, and it takes a lock every appliance process holds while it runs.
 3. **Keeps a safety copy** of the current database, whatever its schema, at `<state dir>/backups/pre-restore-<time>-<id>.sqlite3`, and prints its path.
 4. **Prepares the replacement on a staged copy** beside the live database. A backup from an **older** release is migrated forward there. If anything fails at this point, for example a full disk, the live database is unchanged.
@@ -176,9 +176,13 @@ On an appliance with a service account, the restore runs as that account, so the
 
 The safety copies (`<state dir>/backups/pre-restore-*`) and any old journal files the restore set aside (`<state dir>/backups/set-aside-journal-*`) **hold patient data**. Nothing removes them automatically. Once the restored appliance is verified, and you have recovered anything you needed from them, delete them by hand under your retention and disposal policy:
 
+Use the exact names the restore printed (`safety_backup_path`, `set_aside_journal_path`). Do not use wildcards: your own shell expands them before `sudo` runs, and it cannot read the service account's state directory. List the folder as the service account first if you need the names:
+
 ```bash
+sudo -u aitrium-rtqa ls -l /opt/aitrium/rtqa/state/backups/
+sudo -u aitrium-rtqa rm /opt/aitrium/rtqa/state/backups/pre-restore-<time>-<id>.sqlite3 \
+                        /opt/aitrium/rtqa/state/backups/pre-restore-<time>-<id>.sqlite3.manifest.json
 sudo -u aitrium-rtqa rm -r /opt/aitrium/rtqa/state/backups/set-aside-journal-<time>-<id>
-sudo -u aitrium-rtqa rm /opt/aitrium/rtqa/state/backups/pre-restore-<time>-<id>.sqlite3*
 ```
 
 Keep the safety copy if you may move forward to the newer release again: only a release at least as new as the database it holds can open it.
@@ -226,7 +230,7 @@ If you change your mind at step 2, running the update to N+1 again works from th
 What a rollback across a schema change costs: review work done on N+1 after its pre-upgrade snapshot is not in the restored database (it stays in the safety copy). Received data, attempt results, and logs are not rolled back.
 
 <Warning>
-  - This procedure works only back to a release that includes it, meaning the release documented here or later. To go back to an older release, contact [Aitrium support](mailto:support@aitriumos.com) first.
+  - This procedure works only back to a release that includes it: **`{{FIRST_ROLLBACK_RELEASE}}`** or later (see the release notes). An update runs the *target* release's installer, so an older target cannot do the hand-over above. To go back to a release older than that, contact [Aitrium support](mailto:support@aitriumos.com) first.
   - It has been tested with the newer release simulated by a higher database schema, but not yet across two published releases. **Rehearse it on a staging appliance** before you rely on it in production.
 </Warning>
 
@@ -253,7 +257,64 @@ After upgrading from a release that let browsers cache DICOM for a year, purge t
 
 To go back to the previous release, see [Rolling back an update](#rolling-back-an-update).
 
-Changing a data location or the outbound proxy is also done by running the installer again with the new option, not by editing `.env`. See [The service account](/rtqa-appliance/install#the-service-account).
+Changing the outbound proxy is also done by running the installer again with the new option, not by editing `.env`. See [The service account](/rtqa-appliance/install#the-service-account).
+
+## Changing data locations
+
+The installer's `--state-dir`, `--received-dir`, and `--staging-dir` options set where the appliance keeps its data. **The installer does not move data that is already there.** Choose the locations at install time where you can. To move an existing appliance's data to a new location, do it by hand:
+
+<Steps>
+  <Step title="Stop every service">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa stop --all
+    ```
+  </Step>
+  <Step title="Take a verified backup">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence backup --output /backup/rtqa/rtqa-before-move.sqlite3
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence snapshots
+    ```
+
+    Keep the backup somewhere other than the location you are moving.
+  </Step>
+  <Step title="Move the contents as the service account">
+    Create the new folder for the service account, then copy the contents as that account, keeping modes and times. For example, for the review-state database:
+
+    ```bash
+    sudo install -d -o aitrium-rtqa -g aitrium-rtqa -m 0700 /data/rtqa/state
+    sudo -u aitrium-rtqa cp -a /opt/aitrium/rtqa/state/. /data/rtqa/state/
+    ```
+
+    Use mode `0700` for the state folder and `0750` for the received and staging folders. The state folder must be on local block storage, not NFS or SMB.
+  </Step>
+  <Step title="Run the installer again with the new path">
+    Use the same options as before, plus the new location (and `--confirm-data-dir` if it is outside the work directory, `/srv`, `/data`, `/mnt`, `/media`, `/var/lib`, or `/opt/aitrium`):
+
+    ```bash
+    sudo bash install.sh --version <installed version> --work-dir /opt/aitrium/rtqa \
+      --state-dir /data/rtqa/state <your other install options>
+    ```
+
+    This records the new location, gives it to the service account, and regenerates the systemd units so the services can write there.
+  </Step>
+  <Step title="Check the database">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence doctor
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence status
+    ```
+
+    `persistence status` shows the database path; confirm it is the new one and that the record counts look right.
+  </Step>
+  <Step title="Start the services">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa start --all
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  If you skip the move, the appliance starts with an **empty** database (or empty received and staging folders) at the new location, and the old data, which contains patient data, stays behind at the old one. Once the appliance is verified at the new location, delete the old copy under your retention and disposal policy.
+</Warning>
 
 ## Storage and retention
 
@@ -312,13 +373,24 @@ The list is an inventory, not an enforced allowlist. It leaves out the SFTP and 
 
 The appliance checks each SFTP delivery host's SSH key before it sends any credential. If a host presents a different key, its deliveries are refused with `input_sftp_host_key_changed`.
 
-```bash
-sudo /opt/aitrium/rtqa/bin/aitrium-rtqa sftp host-key show
-sudo /opt/aitrium/rtqa/bin/aitrium-rtqa sftp host-key accept --host sftp.provider.example --port 22 --fingerprint SHA256:<fingerprint>
-sudo /opt/aitrium/rtqa/bin/aitrium-rtqa sftp host-key forget --host sftp.provider.example --port 22
-```
+First verify the new fingerprint with the delivery provider over a channel you trust, such as a phone call. Then:
 
-Verify a new fingerprint with the delivery provider over a channel you trust, such as a phone call, before you accept it. The fingerprint you give must be the one the host last presented. Accepting and forgetting are both audited. Then use **Retry now** on the case's ingestion status in the worklist.
+- **If the host's key was recorded on first use** (no pin), accept the new key. The fingerprint you give must be the one the host last presented. Accepting and forgetting are both audited.
+
+  ```bash
+  sudo /opt/aitrium/rtqa/bin/aitrium-rtqa sftp host-key show
+  sudo /opt/aitrium/rtqa/bin/aitrium-rtqa sftp host-key accept --host sftp.provider.example --port 22 --fingerprint SHA256:<fingerprint>
+  sudo /opt/aitrium/rtqa/bin/aitrium-rtqa sftp host-key forget --host sftp.provider.example --port 22
+  ```
+
+- **If the host is pinned** with `RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT`, `accept` refuses a different key, because a pin always wins. Change the pin to the verified fingerprint (in **Settings → Configuration**, or in `.env` as the service account), then restart the services:
+
+  ```bash
+  sudo -u aitrium-rtqa nano /opt/aitrium/rtqa/.env      # RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT=SHA256:<new fingerprint>
+  sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service restart
+  ```
+
+Then use **Retry now** on the case's ingestion status in the worklist.
 
 ## Emergency access (break-glass)
 
@@ -341,7 +413,7 @@ sudo /opt/aitrium/rtqa/bin/aitrium-rtqa proxy-token rotate
 sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service restart
 ```
 
-Until both the UI server and the proxy restart, signed-in requests are refused.
+The running services keep the secret they started with, so rotation takes effect only when both restart. Restart both: while one runs with the old secret and the other with the new one, signed-in requests are refused.
 
 ## Adding the assistant later
 
@@ -355,9 +427,11 @@ It runs the assisted preflight first and stops, changing nothing, if anything bl
 
 ```bash
 sudo /opt/aitrium/rtqa/bin/aitrium-rtqa assistant disable           # stop it and return to the review profile; files stay
-sudo /opt/aitrium/rtqa/bin/aitrium-rtqa assistant disable --purge   # also remove what the appliance installed
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa assistant disable --purge   # also remove eligible files and packages the appliance installed
 sudo /opt/aitrium/rtqa/bin/aitrium-rtqa components --json           # what is actually installed
 ```
+
+`--purge` removes only what the install ledger shows the appliance added, and only while it is unchanged. Files that were modified, files or packages that were already there or that something else still needs, host build tools, and the model server's log are kept. Check what it reports as kept.
 
 On Linux with an NVIDIA GPU, load the `nvidia-uvm` driver module at boot (for example with `nvidia-persistenced`). The hardened units stop the driver from loading it on first use.
 

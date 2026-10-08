@@ -90,7 +90,7 @@ Loopback alone is not a trust boundary: any process on the host could connect to
 
 So other local accounts on the host can neither assert a proxy-trusted identity (an Aitrium reviewer, a collaborator, or a setup or break-glass reason) nor act as the local account. The service account itself can read the secret and is trusted, like root. Keep interactive logins on the host to administrators.
 
-Rotate the secret with `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa proxy-token rotate`, then **restart both the UI server and the proxy** (`aitrium-rtqa service restart` does both). Until both have restarted, signed-in requests are refused.
+Rotate the secret with `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa proxy-token rotate`, then **restart both the UI server and the proxy** (`/opt/aitrium/rtqa/bin/aitrium-rtqa service restart` does both). Each service keeps the secret it started with, so rotation takes effect only after both restart; while they hold different secrets, signed-in requests are refused.
 
 ## Roles
 

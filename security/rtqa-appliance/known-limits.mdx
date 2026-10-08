@@ -11,7 +11,7 @@ These are the current behaviors of the Aitrium RTQA appliance that matter most f
 
 ## 1. Workstation copies and caching
 
-- DICOM and every other `/api/` response are served with `Cache-Control: no-store`, so browsers and shared caches do not keep them on disk. While a review tab is open, the viewer holds the images it has read in that tab's memory. Closing or reloading the tab releases them, and so do signing out and a change of reviewer or organization (both reload every open appliance tab).
+- DICOM and every other `/api/` response are served with `Cache-Control: no-store`, so compliant browsers and shared caches do not store them. While a review tab is open, the viewer holds the images it has read in that tab's memory. Closing or reloading the tab releases them, and so do signing out and a change of reviewer or organization (both reload every open appliance tab).
 - **Session expiry does not release them.** An expired tab keeps what it loaded in memory, hidden and inert behind the sign-in view, until the same reviewer resumes, someone else signs in, the reviewer signs out, or the tab is closed. A workstation left unlocked with an expired review tab is still a workstation holding patient data. **Apply a workstation screen-lock policy** (automatic lock after a short idle time) on every machine reviewers use, and have reviewers sign out rather than let a session expire. A browser that ignores `no-store`, a swap file, or a crash dump can still put that memory on disk.
 - **Copies cached by an earlier release.** Earlier releases served DICOM with a one-year `immutable` cache lifetime. They are retired by a new DICOM path and by `Clear-Site-Data: "cache"` on sign-out and once after the upgrade. That header works only over HTTPS and only in the browser. **A site reverse proxy or shared cache that stored DICOM under the old headers keeps those entries until they expire (up to a year): purge the appliance's entries from it after upgrading.**
 - Reviewers can download a case report as Markdown and print it. Administrators can export SQL console results as CSV.
@@ -25,6 +25,7 @@ The UI server (`127.0.0.1:8765`) answers only requests carrying the proxy's secr
 
 - Session membership governs review-session content. The worklist and image routes are scoped to the organization, not to session membership, so any signed-in user of the organization can open them.
 - The administrator SQL console is read-only, but it reads the whole review-state database, including session content from any session, in every organization stored there. Each query and each refused attempt is audited. In `jwt` mode, the shared local password is an administrator during setup and break-glass, so it reaches the SQL console in those windows.
+- Changes sent by the current application are tagged with the sign-in they were drafted under, and a mismatched tag is refused. Untagged changes, sent only by older clients, are still accepted and logged.
 - This documentation does not include an endpoint-level authorization matrix.
 
 ## 4. Audit coverage and failure behavior
@@ -87,7 +88,7 @@ Vendor to supply:
 - Without systemd, `aitrium-rtqa stop` signals only this install's processes, identified by executable and work directory. PID files and the worker and model-server owner records are hints only.
 - A supplied snapshot must come from a trusted location. Its checksum and migration history show that it is intact and from a compatible release; they do not authenticate its contents (the manifest can be rewritten to match an altered file).
 - The restore's service check covers processes started through the appliance. A process that opens the database file by other means, such as a `sqlite3` shell, is not detected.
-- The procedure works only back to a release that includes it.
+- The procedure works only back to **`{{FIRST_ROLLBACK_RELEASE}}`** or later (see the release notes): an update runs the target release's installer, which must include the hand-over. A same-schema downgrade can work without it.
 - It is tested with the newer release simulated by a higher schema on the live database. It has not yet been run across two published releases. Rehearse it in staging.
 
 Contact [support@aitriumos.com](mailto:support@aitriumos.com).

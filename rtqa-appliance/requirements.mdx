@@ -35,7 +35,7 @@ Received DICOM grows with use. Size the volume that holds it for the trial's exp
 
 ### Where the data lives
 
-By default everything is under one work directory, `/opt/aitrium/rtqa`. You can put the data on other volumes at install time with `--state-dir`, `--received-dir`, and `--staging-dir` (and `--model-dir` for the assisted profile). The preflight measures each volume separately.
+By default everything is under one work directory, `/opt/aitrium/rtqa`. You can put the data on other volumes at install time with `--state-dir`, `--received-dir`, and `--staging-dir` (and `--model-dir` for the assisted profile). The preflight measures each volume separately. Choose these locations before you install: the installer does not move data that is already there (see [Changing data locations](/rtqa-appliance/operations#changing-data-locations)).
 
 | Data | Default location | Holds |
 |---|---|---|

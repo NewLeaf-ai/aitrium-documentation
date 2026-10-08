@@ -12,7 +12,7 @@ This guide installs the Aitrium RTQA appliance on a Linux x86_64 host, as root, 
 Before you start, check the host against the [system requirements](/rtqa-appliance/requirements).
 
 <Note>
-  Paths on this page assume the default work directory, `/opt/aitrium/rtqa`. The operator command, `aitrium-rtqa`, is installed at `/opt/aitrium/rtqa/bin/aitrium-rtqa`. That folder is not on the `PATH`, so the examples use the full path.
+  Paths on this page assume the default work directory, `/opt/aitrium/rtqa`. The operator command, `aitrium-rtqa`, is installed at `/opt/aitrium/rtqa/bin/aitrium-rtqa`. The installer does not add that folder to the `PATH`, and its closing summary prints every command with its full path. These pages do the same: every command you run is written with the full path, and `aitrium-rtqa <command>` in running text means that same command.
 </Note>
 
 ## 1. Gather the inputs
@@ -57,7 +57,7 @@ Install `cosign` as well if you can. With it on the `PATH`, the installer checks
 
 ## 3. Put the deployment values in a file (optional)
 
-You can enter the Aitrium values in the setup wizard later. For a repeatable install, put them in a file and pass it to the installer with `--env-file`:
+You can enter the Aitrium values in the setup wizard later. For a repeatable install, put them in a file and pass it to the installer with `--env-file`. **If you skip this step, leave `--env-file` out of the commands in steps 4 and 5**: the installer stops if the file it names does not exist.
 
 ```bash
 sudo install -d -m 0755 -o root -g root /etc/aitrium
@@ -167,7 +167,8 @@ What this means day to day:
 - Run admin commands as `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa …`. The command switches to the service account for anything that touches the appliance's data, and keeps root for service management, updates, and the assistant.
 - Do not run the lower-level `rtqa-appliance` command or the `rtqa-start-*` launchers as root. They refuse. See [Troubleshooting: root_refused](/rtqa-appliance/troubleshooting#root_refused).
 - Edit `.env` as the service account: `sudo -u aitrium-rtqa nano /opt/aitrium/rtqa/.env`. On Ubuntu, the kernel refuses even root an in-place edit of it.
-- To change a data location or the outbound proxy after setup, run the installer again with the new option. Root acts only on what the installer recorded, never on the `.env`.
+- To change the outbound proxy after setup, run the installer again with the new option. Root acts only on what the installer recorded, never on the `.env`.
+- The data-location options (`--state-dir`, `--received-dir`, `--staging-dir`) set where the appliance keeps data. The installer does **not** move data that is already there. To move an existing appliance's data, follow [Changing data locations](/rtqa-appliance/operations#changing-data-locations).
 - A `--bin-dir` outside the work directory, such as `/usr/local/bin`, must already be owned by root and writable only by root, all the way from `/`. The installer verifies it and never changes its owner.
 
 Without root, the services run as the installing user. On macOS they run as the user who starts them.
@@ -209,7 +210,7 @@ sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service install
 sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service start
 ```
 
-This starts the worker, the internal UI server, the reviewer proxy, and the TLS edge, and enables them at boot. On a host without systemd, `aitrium-rtqa start` runs them as background processes instead. See [Starting and stopping](/rtqa-appliance/operations#starting-and-stopping).
+This starts the worker, the internal UI server, the reviewer proxy, and the TLS edge, and enables them at boot. On a host without systemd, `aitrium-rtqa start` runs the worker, the UI server, and the proxy (and the model server on the assisted profile) as background processes. It needs the deployment values configured first, and it does not start the TLS edge: manage HTTPS separately on such a host. See [Starting and stopping](/rtqa-appliance/operations#starting-and-stopping).
 
 ## 7. First-run setup
 
@@ -261,7 +262,7 @@ If the delivery provider gave you the host key fingerprint, pin it before the fi
 RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT=SHA256:<fingerprint from the provider>
 ```
 
-For several delivery hosts, use comma-separated `host[:port]=SHA256:…` entries. Without a pin, the appliance trusts the key the host presents the first time and refuses any later change. See [Data protection: SFTP host keys](/security/rtqa-appliance/data-protection#sftp-host-keys).
+For several delivery hosts, use comma-separated `host[:port]=SHA256:…` entries. Without a pin, the appliance trusts the key the host presents the first time and refuses any later change. With a pin, a changed key is handled by changing the pin, not with `sftp host-key accept`. See [Data protection: SFTP host keys](/security/rtqa-appliance/data-protection#sftp-host-keys).
 
 ## Acceptance checklist
 

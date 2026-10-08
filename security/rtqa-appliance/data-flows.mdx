@@ -24,7 +24,7 @@ Other data leaves the appliance by other paths:
 
 - the trial's **SFTP and REDCap services** (REDCap receives a record locator that the control plane supplied);
 - a **remote model server**, if one is configured, which receives assistant prompts that can contain case data;
-- **reviewer workstations**, through report downloads and printing and SQL console CSV exports (see [Known limits](/security/rtqa-appliance/known-limits)). Images and other patient data are not written to the browser's disk cache: every `/api/` response is `Cache-Control: no-store`.
+- **reviewer workstations**, through report downloads and printing and SQL console CSV exports (see [Known limits](/security/rtqa-appliance/known-limits)). Every `/api/` response, including images, is `Cache-Control: no-store`, which forbids browsers and shared caches from storing it. This is an HTTP caching rule, not a guarantee that patient data never reaches a workstation's disk: a browser that ignores `no-store`, a swap file, or a crash dump can still put it there, and exports are saved files.
 
 ## Data classes
 
@@ -194,6 +194,6 @@ The assisted profile adds `github.com` (llama.cpp archive or source) and `huggin
 | `RTQA_NETWORK_CA_BUNDLE_FILE` | A PEM file of extra CAs, for example a TLS-inspecting proxy's CA. **Added** to the default trust store, never replacing it. Falls back to `SSL_CERT_FILE` and `REQUESTS_CA_BUNDLE`. The file must contain certificates only. |
 | `RTQA_NETWORK_SFTP_VIA_PROXY` | `true` sends SFTP through the proxy with HTTP `CONNECT`. Default `false`. |
 
-Every outbound HTTP client is built in one place and reads the environment only through these settings, so explicit settings always win. The installer and `aitrium-rtqa update` honor the same settings for their own downloads. Both fail closed: an unreadable or empty proxy file, a bad proxy URL, or a bad CA path stops the install or update with one line, never falling back to a direct connection. The wizard's **Network** step writes these settings, and its check explains failures in words (proxy refused, proxy wants a password, TLS not trusted, DNS).
+Every outbound HTTP client is built in one place and reads the environment only through these settings, so explicit settings always win. The installer and `aitrium-rtqa update` honor the same settings for their own downloads, with one exception: the installer records an inline proxy URL only when it carries no credentials. For a proxy that needs a password, use `RTQA_NETWORK_PROXY_URL_FILE`, or updates run by root will not use it. Both fail closed: an unreadable or empty proxy file, a bad proxy URL, or a bad CA path stops the install or update with one line, never falling back to a direct connection. The wizard's **Network** step writes these settings, and its check explains failures in words (proxy refused, proxy wants a password, TLS not trusted, DNS).
 
 For a proxy that needs a password, put the URL with credentials in a root-owned file that nobody else can write (`root:aitrium-rtqa`, mode `0640`, serves both root and the services), and name it in `RTQA_NETWORK_PROXY_URL_FILE`. A proxy changed only in the wizard reaches the services but not root's updates; run the installer again with `--env-file` to record it.
