@@ -1,0 +1,63 @@
+---
+title: "Supply Chain & Updates"
+description: "How each Aitrium RTQA appliance download is verified, which checks are optional or can be relaxed, how updates work, and the SBOMs each release publishes."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Security and compliance reviewers · Hospital IT" />
+
+Each kind of download is checked by its own mechanism. They are not all the same, and some can be relaxed by explicit development overrides. This page describes each one separately.
+
+## Verification, mechanism by mechanism
+
+| Control | What the appliance does |
+|---|---|
+| **Signed release manifest** | The release manifest is the trust root. Aitrium's release workflow signs the manifest, the installer, the appliance package (wheel), the constraints file, and the SBOMs with cosign keyless signing (Sigstore, GitHub OIDC). On the release channel, the only accepted signer is the release workflow at the release's tag. With an explicitly chosen `--channel dev`, the development-build workflow's identity is accepted instead. |
+| **What is signature-checked, and when** | **Only when `cosign` is on the `PATH`.** The installer checks the signatures of the **manifest** and the **appliance package**. `aitrium-rtqa update` checks the **manifest** and the **installer** it is about to run. Other files are checked by their sha256 in the manifest, not by their own signature, even though their signatures are published. With cosign, a failed check stops the install, and so does a missing signature bundle unless `--allow-unsigned` (development only) is given. |
+| **Without cosign** | The installer says once that signatures were not verified, and prints the manual `cosign verify-blob` command. The sha256 checks still run, but they only prove that the files match the manifest that was fetched. They do not prove who published it. This applies to remote manifests and local mirrors alike. The appliance does not install cosign; installing it is recommended. |
+| **sha256-checked artifacts** | The appliance package, the constraints file, the analysis toolkit's manifest and installer, Caddy, the prebuilt llama.cpp archive, and the model weights are each checked against a sha256 in the manifest before use. On the normal release path, a mismatch or a missing pin stops the install. `--allow-unpinned` (development only) relaxes some of these checks (unpinned constraints, model or llama.cpp versions); its use should be disclosed. |
+| **Python dependencies** | Version-pinned, not hash-pinned. pip installs under the release's frozen constraints file (itself sha256-checked), so the versions are fixed, but each dependency file is trusted as served by the index (PyPI or your mirror). Per-file hash pinning is planned. |
+| **llama.cpp source build** (assisted) | Pinned to a git commit, not a file hash: a fresh checkout must be at the pinned commit with a clean tree. Build tools the host lacks may be installed through the host's own package manager (`apt-get`), under that package manager's own checks. |
+| **https only** | curl, pip, and git fetches must be https, redirects too. `file://` is allowed for local mirrors. `--allow-insecure-http` is a development-only escape hatch. |
+| **pip transport guard** | pip runs isolated from the host's pip configuration, against an explicit index, with a guard that refuses any non-https request at the lowest transport layer pip uses, including in pip's child processes. If the guard cannot be installed or is not active, the installer stops before pip runs. Scope: it protects against network downgrade and misconfigured mirrors. It is not a sandbox against hostile code already on the host. |
+| **Internal mirror** | `--pip-index-url https://…` (and repeatable `--pip-extra-index-url`) uses your Artifactory, Nexus, or devpi. The mirror cannot change the appliance or the dependency versions. A `file://` manifest mirror is supported; without cosign it is trusted as-is, and the installer warns. A local manifest mirror alone does not make the install offline: dependencies still come from an https package index, and every file the manifest names, plus any build prerequisites, must be reachable or staged. |
+| **First install (bootstrap)** | The documented first install fetches `install.sh` from the release bucket and runs it. That first copy is protected by https only; nothing verifies its signature before it runs. To verify it first, download `install.sh` and its `.sigstore.json` bundle and check them with `cosign verify-blob` (below) before running it. |
+| **Own virtual environment** | The installer creates `<work dir>/venv` and installs into it. The operator command, the launchers, and the units use it. |
+| **SBOMs per profile** | Each release publishes CycloneDX JSON: `sbom-review.cdx.json` (the core Python environment), `sbom-assisted.cdx.json` (core plus the assistant), and `sbom-ui.cdx.json` (the bundled web application's npm tree). Native artifacts (llama.cpp, model weights, Caddy) are listed with their sha256 in the manifest rather than in an SBOM. The analysis toolkit is installed by its own verified installer and is not covered by these SBOMs; ask Aitrium for its SBOM. |
+| **Dependency audit** | Aitrium's CI runs `pip-audit` and `npm audit` (high and critical) on every push and pull request. A release audits the exact constraints file it ships before publishing. Reviewed exceptions are kept in a list, and stale entries fail the build. |
+| **Clean-install test** | Before a release publishes, it is installed into a fresh `ubuntu:24.04` container, started, checked at `/healthz`, and run through the preflight. The release workflow requires that test, and the test suites, to pass. |
+| **Preflight** | A new install checks the machine first and installs nothing on a blocking problem. The outcome is recorded in the install record. |
+
+<Note>
+  These statements describe how the release workflow is configured. They are not evidence that a particular release was built that way. For the release you install, ask Aitrium for the release manifest, the signature verification result, the SBOMs, and the CI results.
+</Note>
+
+### Verifying `install.sh` before you run it
+
+With `cosign` installed, download `install.sh` and `install.sh.sigstore.json` from the same release, then:
+
+```bash
+cosign verify-blob --bundle install.sh.sigstore.json \
+  --certificate-identity "https://github.com/NewLeaf-ai/aitrium-rtqa-appliance/.github/workflows/release.yml@refs/tags/rtqa-appliance-v<version>" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  install.sh
+```
+
+Replace `<version>` with the release you are installing. Ask Aitrium where the release's signature bundles are published.
+
+### Development overrides
+
+`--allow-unpinned`, `--allow-unsigned`, `--allow-insecure-http`, and `--channel dev` relax verification for development. Do not use them on a production appliance. Ask whoever installed an appliance whether any was used. The channel is recorded in the install record; whether the other options were used should be taken from the install output.
+
+## Updates
+
+| | What the appliance does |
+|---|---|
+| **Update** | `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa update [--version <version>]`, with a typed confirmation. It fetches the target release and verifies its installer, stops the services, then runs that installer with the same choices as the original install. The installer's pre-upgrade phase snapshots the state database, then migrates the schema and checks the database. Finally the services start and `/healthz` is verified. |
+| **Interruption** | The restart interrupts requests and live streams, but it does **not** sign reviewers out: an unexpired session token stays valid. |
+| **Never automatic** | Updates never happen silently. The console's **Settings → Updates** page only shows what is available and the command to run. |
+| **Security fixes** | Delivered as a new signed release, applied with `aitrium-rtqa update`. |
+| **Rollback** | Not a one-command procedure. Reinstalling the previous release works only when the database schema did not change. If it changed, the older release refuses the newer database, and there are no down-migrations. Treat moving back across a schema change as a maintenance procedure to plan with Aitrium support, not as an assured capability. See [Restoring from a backup](/rtqa-appliance/operations#restoring-from-a-backup). |
+
+For the operator steps, see [Operations: Updates](/rtqa-appliance/operations#updates).

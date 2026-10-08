@@ -1,0 +1,130 @@
+---
+title: "Security Questionnaire"
+description: "Pre-filled answers about the Aitrium RTQA appliance, organized by the domains of the SIG Lite and CSA CAIQ questionnaires."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Vendor-risk and security reviewers" />
+
+The questions follow the domains of the SIG Lite and CSA CAIQ questionnaires that vendor-risk teams commonly send. They are not the official question text.
+
+How to read the answers:
+
+- **Customer** means your organization's responsibility.
+- **Planned** means not in this release.
+- **As configured** means the mechanism exists in the appliance or in Aitrium's release workflow. It is not evidence that a particular release or deployment was verified (see [Known limits](/security/rtqa-appliance/known-limits#9-release-evidence-and-operational-commitments)).
+
+## Governance and scope
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 1 | Is the product SaaS, on-premises, or hybrid? | On-premises software on a customer host, which reports to an Aitrium-hosted control plane. Raw DICOM stays on the customer host; see #4 for what leaves. | [Overview](/security/rtqa-appliance/overview), [Architecture](/security/rtqa-appliance/architecture) |
+| 2 | What data does the product store? | Trial radiotherapy DICOM and derived QA results, review findings, case reports, and audit records. Treat all of it as PHI. | [Overview](/security/rtqa-appliance/overview), [Data flows](/security/rtqa-appliance/data-flows) |
+| 3 | Does the product de-identify data? | No. It is designed to receive de-identified trial data; de-identification happens upstream of the appliance. | [Overview](/security/rtqa-appliance/overview) |
+| 4 | Does any patient data leave the customer site? | Raw DICOM is not uploaded through the control-plane API, and control-plane payloads are restricted by a typed allow-list. Disclosed separately: case-linked derived summaries (grades, counts, bounded measurements); two fields where a person types text (colleague search, the optional support note) that cannot be guaranteed free of patient details; REDCap requests carrying a control-plane-supplied record locator; a remote model server, if configured; and reviewer exports (report download and print, SQL CSV) and browser caches on workstations. | [Data flows](/security/rtqa-appliance/data-flows), [Known limits](/security/rtqa-appliance/known-limits) |
+| 5 | Is there a list of every outbound field? | For the control plane, the route list gives each route's declared path, query, form, and JSON fields, plus the headers each request carries (which the allow-list does not validate). The prose-field list is the list of prose fields, not of every field that can carry a string the control plane published. | [Data flows](/security/rtqa-appliance/data-flows#control-plane-routes) |
+
+## Access control and identity
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 6 | How do users authenticate? | Aitrium accounts. The appliance verifies a control-plane-signed RS256 JWT against published keys. | [Access management](/security/rtqa-appliance/access-management) |
+| 7 | Is SSO with our identity provider supported? | Planned. Not in this release. | [Access management](/security/rtqa-appliance/access-management#single-sign-on-and-mfa) |
+| 8 | Is MFA enforced? | Not by the appliance. It depends on the Aitrium account provider's policy; ask Aitrium. Planned SSO would let your identity provider enforce it. | [Access management](/security/rtqa-appliance/access-management#single-sign-on-and-mfa) |
+| 9 | Are there shared or local accounts? | One shared local password, usable in the default mode only during first-run setup and a time-boxed break-glass window (at most 24 hours). Break-glass use is audited (a log line always; a database row on a best-effort basis; coalesced per user and address), and explicit local sign-in requests are logged. Not every shared-password request creates an audit record. | [Access management](/security/rtqa-appliance/access-management#the-shared-local-password) |
+| 10 | Is role-based access control supported? | Yes, with qualifications. A platform administrator role for the console; per-session view, edit, and approve membership for review-session content, managed on the appliance. Platform roles come from the Aitrium token, or for the local account from local configuration and the setup and break-glass rules. Sessions migrated from before session access existed are viewable by non-administrators of the same organization. | [Access management](/security/rtqa-appliance/access-management#roles) |
+| 11 | Can administrators read clinical content? | Through the review screens, an administrator sees only sessions they are a member of. But an administrator can run read-only SQL queries over the whole review-state database through the console, which includes session content; each query is audited. In `jwt` mode the shared password is an administrator during setup and break-glass. | [Access management](/security/rtqa-appliance/access-management#roles), [Known limits](/security/rtqa-appliance/known-limits) |
+| 12 | Is access restricted to our organization? | Yes. Tokens must belong to the organization bound to this appliance: the control plane's assignment takes precedence, then the cached last assignment, then (only when neither exists) a developer fallback setting. Others get `403`. | [Access management](/security/rtqa-appliance/access-management) |
+| 13 | Can a local process impersonate a user? | Another local account cannot assert a proxy-trusted identity: the UI server believes identity headers only with the proxy's secret (mode 0600, owned by the service account; rotate with `aitrium-rtqa proxy-token rotate`). But a local process that calls the UI server's loopback port without identity headers acts as the local account (a reviewer by default in `jwt` mode, or whatever `RTQA_SIGNIN_LOCAL_ROLE` says). | [Access management](/security/rtqa-appliance/access-management#only-the-proxy-can-assert-an-identity), [Known limits](/security/rtqa-appliance/known-limits) |
+| 14 | How are sessions managed? | A JWT in an `HttpOnly`, `SameSite=Strict` cookie, `Secure` by default (configurable), that expires with the reviewer token. Validation is stateless: sign-out clears the cookie but does not revoke the token, and a restart does not sign anyone out. The sign-in limiter (default 10 per address per minute) covers sign-in and session establishment, not every shared-password attempt. | [Access management](/security/rtqa-appliance/access-management) |
+| 15 | How are users provisioned and deprovisioned? | Account provisioning and token issuance are Aitrium's. Removing a user there stops new token exchanges; a token already issued stays valid on the appliance until it expires. This documentation cannot establish Aitrium's revocation policy; ask Aitrium. Session memberships are granted and revoked in the application and audited. | [Access management](/security/rtqa-appliance/access-management) |
+| 16 | Do the services run with least privilege? | When the service-account install or migration succeeded: yes. They run as the unprivileged `aitrium-rtqa` account in hardened systemd units with no capabilities, except `CAP_NET_BIND_SERVICE` for the edge, and root does not source the account's configuration or run its code. An existing install the account cannot reach keeps running as root with a warning; verify each deployment. The host's administrators are the customer's. | [Data protection](/security/rtqa-appliance/data-protection#the-service-account-and-hardened-units) |
+
+## Encryption and key management
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 17 | Is data encrypted in transit? | For users, yes: TLS at the built-in edge or your reverse proxy. Outbound `https://` connections verify certificates, but the clients do not refuse an `http://` URL (control plane, REDCap, a remote model server, update redirects), so confirm each configured URL is https. Internal hops are plain HTTP on loopback; the proxy secret guards identity headers on the proxy → UI server hop only. SFTP uses SSH with the server's host key verified (trust on first use, or a pinned fingerprint) before any credential is sent. | [Data protection](/security/rtqa-appliance/data-protection#in-transit) |
+| 18 | Is data encrypted at rest? | Not by the appliance. Customer: full-disk or volume encryption of the data volumes and backups. | [Data protection](/security/rtqa-appliance/data-protection#at-rest) |
+| 19 | Who supplies the TLS certificate? | Customer (`--tls-cert`, `--tls-key`). Without one, the edge uses a self-signed certificate, for testing only. | [Install guide](/rtqa-appliance/install#tls-for-reviewers) |
+| 20 | Can it work with a TLS-inspecting proxy? | Yes, for the clients routed through the appliance's outbound network settings. Add the proxy's CA with `RTQA_NETWORK_CA_BUNDLE_FILE`; it is added to the default trust store, never replacing it. | [Data flows](/security/rtqa-appliance/data-flows#outbound-proxy-and-custom-ca) |
+| 21 | Where are secrets stored? | In `.env` (mode 0600) and `secrets/` (mode 0700) on the host. Secret files with unsafe ownership or permissions are refused. No external vault integration in this release. | [Data protection](/security/rtqa-appliance/data-protection#at-rest) |
+| 22 | Does the appliance hold signing keys? | It holds no reviewer-token signing key; it only verifies reviewer tokens with public keys. The TLS edge holds your certificate's private key, and Caddy's local CA key when the self-signed certificate is used. | [Access management](/security/rtqa-appliance/access-management) |
+
+## Network security
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 23 | Which inbound ports are needed? | 443 (and optionally 80 for the redirect) on the edge. Nothing else should be exposed. | [Data flows](/security/rtqa-appliance/data-flows#inbound-ports-and-bind-addresses) |
+| 24 | Which outbound destinations are needed? | The Aitrium control plane (required); release manifest hosts (optional); the trial's SFTP delivery host and, if used, its REDCap host; Hugging Face only for the assisted profile; a remote model server, if configured. `aitrium-rtqa network egress --json` prints a partial inventory (without the SFTP, REDCap, or remote model hosts). It is not an enforced allowlist. | [Data flows](/security/rtqa-appliance/data-flows#egress-allowlist) |
+| 25 | Does the vendor connect in for support? | No. The appliance only makes outbound connections; Aitrium has no inbound path. | [Data flows](/security/rtqa-appliance/data-flows#inbound-ports-and-bind-addresses) |
+| 26 | Is an outbound proxy supported? | Yes, including authenticated proxies, a bypass list (loopback and an on-host model server are always direct), and a custom CA. SFTP uses HTTP `CONNECT` through it only with `RTQA_NETWORK_SFTP_VIA_PROXY=true`. | [Data flows](/security/rtqa-appliance/data-flows#outbound-proxy-and-custom-ca) |
+| 27 | Are security headers set? | HSTS, `X-Frame-Options: DENY`, `nosniff`, `no-referrer`, and `Permissions-Policy`. The Content Security Policy is report-only by default; set `RTQA_WEB_CSP_MODE=enforce` to enforce it. | [Data protection](/security/rtqa-appliance/data-protection#in-transit) |
+| 28 | What is public before sign-in? | The operational endpoints `/healthz` and `/status` (version, organization, status lines; never patient data; `RTQA_WEB_STATUS_PAGE=minimal` or `off` reduces it); the sign-in and session endpoints and the sign-in configuration; the application's static files; the Content Security Policy report endpoint. The setup wizard has its own one-time token. | [Data flows](/security/rtqa-appliance/data-flows#inbound-ports-and-bind-addresses) |
+
+## Logging and monitoring
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 29 | Is access to patient images logged? | Yes, per user × case × study × 30-minute window, in the database and as a JSON log line `rtqa.audit.image_access`. It is a buffered audit: hits still in memory can be lost on a crash or a database failure. Reopening a cached study in the viewer is still recorded (the viewer sends a signal), but image files already in a browser's cache can be read outside the application with no audit. | [Data protection](/security/rtqa-appliance/data-protection#audit-and-logging), [Known limits](/security/rtqa-appliance/known-limits) |
+| 30 | Can audit logs go to our SIEM? | Partly. The process logs (the journal or the log files) can be forwarded; they carry sign-ins, image access, break-glass, configuration writes, and the worker's reclaim events. Most audit rows are written only to the database, so log forwarding is not complete audit-ledger forwarding; back up or export the database too. Built-in syslog or SIEM forwarding is not provided. | [Data protection](/security/rtqa-appliance/data-protection#audit-and-logging) |
+| 31 | Are administrative actions logged? | Yes, through different mechanisms: configuration writes (log line), SQL console queries (database rows), storage reclaim (database rows, plus worker log lines for automatic runs), session membership and sign-off (database rows), break-glass use (log line always, database row best effort). A client-side CSV download from the SQL console is not itself audited (the query is). | [Data protection](/security/rtqa-appliance/data-protection#audit-and-logging) |
+| 32 | Are logs tamper-evident? | No. Audit rows live in the local database and are not hash-chained. Keep an independent copy off the box (customer): forward the logs and back up the database. | [Data protection](/security/rtqa-appliance/data-protection#audit-and-logging) |
+| 33 | How long are logs kept? | Database audit rows: indefinitely in this release. Log files: the journal's policy, or your rotation for log files written without systemd. | [Operations: Logs](/rtqa-appliance/operations#logs) |
+| 34 | Is there health monitoring? | `/healthz` for load balancers, `/status`, `aitrium-rtqa status`, and disk watermarks that stop new work before the disk fills. | [Operations: Health and status](/rtqa-appliance/operations#health-and-status) |
+
+## Vulnerability management
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 35 | Are dependencies scanned? | Yes, as configured in the CI and release workflows: `pip-audit` and `npm audit` (high and critical) on every push and pull request; a release audits the exact dependency set it ships. Reviewed exceptions are kept in a list. Ask Aitrium for the CI results of the release you install. | [Supply chain](/security/rtqa-appliance/supply-chain) |
+| 36 | Is an SBOM provided? | Yes, as configured in the release workflow: CycloneDX JSON per profile (review, assisted) and for the web application, signed and checksummed with each release. Not covered: the separately installed analysis toolkit and native components (Caddy, llama.cpp, model weights), which are pinned by sha256 in the manifest instead. | [Supply chain](/security/rtqa-appliance/supply-chain) |
+| 37 | Who patches the operating system? | Customer. | [Overview: What you provide](/security/rtqa-appliance/overview#what-you-provide) |
+| 38 | How are security fixes delivered? | As a new signed release, applied with `aitrium-rtqa update`. Updates are never automatic. | [Supply chain](/security/rtqa-appliance/supply-chain#updates) |
+| 39 | Has the product had an independent penetration test? | Not documented here. Ask Aitrium. | — |
+
+## Incident response
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 40 | Is there an incident response process? | Aitrium's process is not part of the appliance or this documentation; ask Aitrium for it. You run incident response for your own host. | — |
+| 41 | What evidence is available for an investigation? | The image-access audit, the audit table, the proxy's sign-in log lines (user, result, source address), and the request logs, with the coverage limits described in Data protection and Known limits. | [Data protection](/security/rtqa-appliance/data-protection#audit-and-logging) |
+| 42 | Can an account be locked quickly? | Disabling it in Aitrium accounts stops new sign-ins, but an issued token stays valid until it expires (no individual-token revocation on the appliance). A role restriction (`RTQA_SIGNIN_ALLOWED_ROLES`) takes effect after a proxy restart and applies to a role, not one user. Stopping the proxy stops all access. Break-glass can be ended at once with `aitrium-rtqa signin break-glass --off`. | [Access management](/security/rtqa-appliance/access-management) |
+
+## Data retention and disposal
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 43 | How long is DICOM kept? | 30 days after a case history's last activity by default (`RTQA_DATA_RETENTION_DAYS`), it becomes **eligible** for reclaim; that is not a deletion deadline. Reclaim is manual unless the site turns on automatic daily reclaim, which ships off. Attempt results under `work/`, browser caches, and workstation exports are not reclaimed. | [Data protection](/security/rtqa-appliance/data-protection#retention-and-deletion) |
+| 44 | What is never deleted automatically? | Any case history that is held or pinned, has an open review, an unsigned report, pending work, unreadable metadata, or an import in progress. Reviews, reports, and audit rows are never reclaimed. Automatic reclaim is off by default. | [Data protection](/security/rtqa-appliance/data-protection#retention-and-deletion) |
+| 45 | Can a case be deleted on request? | Not in this release: no case-deletion path exists. Only an archived, unsigned review session can be deleted, by an administrator who is a member, and that is audited. Arrange case deletion with Aitrium. | [Data protection](/security/rtqa-appliance/data-protection#what-is-not-provided) |
+| 46 | How is the assistant's data retained? | Conversations are purged after the organization's setting (default 30 days), with an audit row. | [Data protection](/security/rtqa-appliance/data-protection#assistant-conversations) |
+| 47 | How are disks disposed of? | Customer. Reclaim deletes files in the ordinary way; it is not secure erasure. | [Overview: What you provide](/security/rtqa-appliance/overview#what-you-provide) |
+
+## Third parties and subprocessors
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 48 | Which third parties receive data from the appliance? | Aitrium's control plane (derived summaries, the colleague search and support note, staff identity in the sign-in exchange). The trial's SFTP and REDCap services (credentials and a control-plane-supplied record locator). A remote model server, if configured (assistant prompts, which can contain case data). Google identity services (reviewers' sign-ins, from the browser). Release hosts (Google Cloud Storage, GitHub) and, for the assisted profile, Hugging Face only serve downloads. Reviewer workstations hold exports and cached images. | [Data flows](/security/rtqa-appliance/data-flows), [Known limits](/security/rtqa-appliance/known-limits) |
+| 49 | Does the product use an external AI service? | Not by default. A default install has no LLM components, and the optional assistant's managed runtime runs on the box. A site can point the assistant at a remote model server, which then receives its requests. | [Overview](/security/rtqa-appliance/overview) |
+| 50 | Which open-source components are bundled? | See the SBOMs; native components (Caddy, llama.cpp) are pinned by sha256 in the manifest. | [Supply chain](/security/rtqa-appliance/supply-chain) |
+
+## Business continuity and backup
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 51 | How is data backed up? | `aitrium-rtqa persistence backup --output <path>` takes a consistent online copy of the review-state database with a checksum manifest. Scheduling it and storing it encrypted are the customer's job. It does not include the received DICOM and archives, staging, the `work/` attempt results, or anything on workstations. | [Operations: Backups](/rtqa-appliance/operations#backups) |
+| 52 | How is it restored? | `aitrium-rtqa persistence restore --input <file>` (in a maintenance window) checks the checksum and schema, keeps a safety copy, and replaces the database in one step. The backup's schema must match the installed release; to restore after moving back to an earlier release, contact Aitrium support. | [Operations: Restoring from a backup](/rtqa-appliance/operations#restoring-from-a-backup) |
+| 53 | What happens if the control plane is unreachable? | Already-issued, unexpired reviewer tokens can keep validating with signing keys cached in memory, within the grace period (default 24 hours). A restart, a token's expiry, or a missing signing key can end that; new sign-ins and new work orders need the control plane. | [Access management](/security/rtqa-appliance/access-management#signing-keys-and-outages) |
+| 54 | Is high availability supported? | No. The appliance is a single host. Recovery is by reinstall plus a database restore; delivered DICOM can be fetched again only if the trial's delivery source still has it. Recovery objectives (RTO and RPO): vendor to supply. | [Operations: Backups](/rtqa-appliance/operations#backups) |
+
+## Secure development
+
+| # | Question | Answer | See |
+|---|---|---|---|
+| 55 | Are releases signed? | Yes, as configured in the release workflow: cosign keyless (Sigstore) at the release tag. Verifying signatures at install is optional (it needs cosign on the host) and covers the manifest and appliance package (installer) or the manifest and installer (updater). | [Supply chain](/security/rtqa-appliance/supply-chain) |
+| 56 | Is every download integrity-checked? | By separate mechanisms, not one. Release artifacts (appliance package, constraints, toolkit, Caddy, prebuilt llama.cpp, model weights): sha256 from the manifest, failing closed on the normal path. Python dependencies: pinned versions, not file hashes. A llama.cpp source build: a pinned git commit. Build tools from the OS: the host's package manager. All fetches are https. Development overrides (`--allow-unpinned`, `--allow-unsigned`, `--channel dev`) relax checks and should be disclosed. Without cosign, the hashes do not prove who published the manifest. | [Supply chain](/security/rtqa-appliance/supply-chain) |
+| 57 | Is the build tested before release? | Yes, as configured: the release workflow requires the test suites and a clean-machine install test, and audits the shipped dependency set before it publishes. | [Supply chain](/security/rtqa-appliance/supply-chain) |
+| 58 | Are CI actions pinned? | Yes: every external action is pinned to a full commit SHA (local reusable workflows are referenced by path). | [Supply chain](/security/rtqa-appliance/supply-chain) |
+| 59 | Can updates be rolled back? | Only as a planned maintenance procedure. Reinstalling the previous release works when the schema did not change. Across a schema change, the older release refuses the newer database, and there are no down-migrations. Plan any move back to an earlier release with Aitrium support. | [Supply chain](/security/rtqa-appliance/supply-chain#updates) |

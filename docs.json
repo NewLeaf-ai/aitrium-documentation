@@ -106,6 +106,18 @@
             "pages": [
               "security/aitrium-os/sftp-compatibility"
             ]
+          },
+          {
+            "group": "RTQA appliance (for your IT)",
+            "icon": "server-cog",
+            "pages": [
+              "rtqa-appliance/it-setup",
+              "rtqa-appliance/requirements",
+              "rtqa-appliance/install",
+              "rtqa-appliance/operations",
+              "rtqa-appliance/troubleshooting",
+              "rtqa-appliance/configuration"
+            ]
           }
         ]
       },
@@ -127,6 +139,20 @@
               "security/aitrium-os/architecture",
               "security/aitrium-os/data-flows",
               "security/aitrium-os/access-management"
+            ]
+          },
+          {
+            "group": "RTQA appliance",
+            "icon": "server-cog",
+            "pages": [
+              "security/rtqa-appliance/overview",
+              "security/rtqa-appliance/architecture",
+              "security/rtqa-appliance/data-flows",
+              "security/rtqa-appliance/access-management",
+              "security/rtqa-appliance/data-protection",
+              "security/rtqa-appliance/supply-chain",
+              "security/rtqa-appliance/known-limits",
+              "security/rtqa-appliance/questionnaire"
             ]
           }
         ]

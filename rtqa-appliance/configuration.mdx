@@ -1,0 +1,212 @@
+---
+title: "Configuration reference"
+description: "Every Aitrium RTQA appliance setting: what it controls, its default, and its older name."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+{/* Generated from the appliance's settings registry. Regenerate, do not edit by hand:
+    PYTHONPATH=src python3 -c "from rtqa_appliance import settings_registry as r; print(r.settings_reference_markdown())"
+    run in the appliance repository at the documented release. Keep everything from the first "## " heading, and escape angle brackets and curly braces outside inline code. */}
+
+<Audience who="Trial organization IT · Hospital IT running the appliance" />
+
+This page is generated from the settings registry of the Aitrium RTQA appliance release it documents, so it lists exactly the settings that release reads. On an appliance, `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa settings reference` prints the same reference for the installed release.
+
+Settings live in the appliance's configuration file, `/opt/aitrium/rtqa/.env`. Change them in the console (**Settings → Configuration**, for administrators) or in the setup wizard. Both validate the value, keep a timestamped backup, and show what changed. To edit the file by hand, edit it as the service account: `sudo -u aitrium-rtqa nano /opt/aitrium/rtqa/.env`. Restart the services after a change.
+
+Some settings are root's, not the `.env`'s, on an appliance with a service account: the data locations, the reviewer proxy's port and address, and the outbound proxy and CA used for updates. Change those by running the installer again with the matching option. See [The service account](/rtqa-appliance/install#the-service-account).
+
+**How to read the tables.**
+
+- Each key is named for its purpose under a group prefix, for example `RTQA_SITE_*` for the appliance's identity to Aitrium and `RTQA_SIGNIN_*` for reviewer sign-in.
+- **Was** is the key's older name. Old names still work for two releases. `aitrium-rtqa settings check` reports any your file still uses, and `aitrium-rtqa settings migrate-env --apply` rewrites them, keeping a `.env.pre-rename` backup.
+- Units are in the key: `_S` seconds, `_MS` milliseconds, `_HOURS`, `_DAYS`, `_PCT` percent, `_GB` gigabytes (10^9 bytes). `_DIR` is a folder and `_FILE` a file. Where a `_SECRET_FILE` or `_PASSWORD_FILE` variant exists, prefer it to the inline value.
+- `<work dir>` is the work directory, `/opt/aitrium/rtqa` by default.
+
+<Note>
+  The installer writes `RTQA_DATA_RECEIVED_DIR=<work dir>/inbox` for every new install. The registry default below, `<work dir>/source`, applies only when the key is missing from the file altogether.
+</Note>
+
+## Site identity
+
+Who this appliance is to Aitrium. Provided by Aitrium at onboarding.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_SITE_API_URL` | Base URL of the Aitrium API this appliance reports to. |  | yes | `RTQA_API_BASE_URL` |
+| `RTQA_SITE_TOKEN_PATH` | Path on the Aitrium API that issues the appliance's access token. | `/external/v1/oauth/token` |  | `RTQA_OAUTH_TOKEN_PATH` |
+| `RTQA_SITE_CLIENT_ID` | Client id the appliance uses to authenticate to Aitrium. |  | yes | `RTQA_EXTERNAL_CLIENT_ID` |
+| `RTQA_SITE_CLIENT_SECRET` | Client secret, inline. Prefer RTQA_SITE_CLIENT_SECRET_FILE. (secret) |  |  | `RTQA_EXTERNAL_CLIENT_SECRET` |
+| `RTQA_SITE_CLIENT_SECRET_FILE` | File containing the client secret (mode 0600). Preferred over the inline value. (secret) |  |  | `RTQA_EXTERNAL_CLIENT_SECRET_FILE` |
+| `RTQA_SITE_DEPLOYMENT_ID` | Aitrium's id for this deployment. |  | yes | `RTQA_DEPLOYMENT_ID` |
+| `RTQA_SITE_APPLIANCE_ID` | Aitrium's id for this appliance. |  | yes | `RTQA_APPLIANCE_ID` |
+| `RTQA_SITE_POLL_INTERVAL_S` | How often the worker asks Aitrium for new work. | `30` |  | `RTQA_POLL_INTERVAL_SECONDS` |
+| `RTQA_SITE_REQUEST_TIMEOUT_S` | Timeout for each request to the Aitrium API. | `30` |  | `RTQA_REQUEST_TIMEOUT_SECONDS` |
+
+## Reviewer sign-in
+
+How reviewers authenticate and which organizations and roles may use this appliance.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_SIGNIN_MODE` | How reviewers sign in: 'jwt' (Aitrium reviewer accounts; the shared local password works only during setup and break-glass), 'basic' (a shared local password), or 'both'. New installs are written with 'jwt'; when the key is absent the legacy 'basic' applies so an upgrade never changes mode. 'basic' and 'both' are legacy: the console recommends 'jwt'. | `basic` · one of `basic`, `jwt`, `both` |  | `RTQA_UI_AUTH_MODE` |
+| `RTQA_SIGNIN_BREAK_GLASS_UNTIL` | Break-glass end: in 'jwt' mode the shared local password also works from RTQA_SIGNIN_BREAK_GLASS_SET_AT until this time-zoned ISO-8601 instant; the window is at most 24 h. Refused without SET_AT, with a SET_AT in the future, when unparseable or zone-less, or over the cap. When the appliance runs from a config file it is read only from that file (re-read every 5 s; a removed key, a missing or unreadable file means no break-glass), so it starts, ends and expires without a restart. Every local sign-in while it is on is audited. Set it with `aitrium-rtqa signin break-glass --minutes N`; end it with `--off`. The host clock is trusted; clock manipulation is out of scope. |  |  |  |
+| `RTQA_SIGNIN_BREAK_GLASS_SET_AT` | Break-glass start: when the grant was made (time-zoned ISO-8601), written by `aitrium-rtqa signin break-glass` with RTQA_SIGNIN_BREAK_GLASS_UNTIL. A grant is valid only while SET_AT ≤ now ≤ UNTIL and UNTIL − SET_AT ≤ 24 h. |  |  |  |
+| `RTQA_SIGNIN_JWKS_URL` | Where the reviewer token signing keys are published. Defaults to the Aitrium API's well-known location. |  |  | `RTQA_REVIEWER_JWKS_URL` |
+| `RTQA_SIGNIN_TOKEN_ISSUER` | Issuer expected in reviewer tokens. Defaults to the Aitrium API. |  |  | `RTQA_REVIEWER_TOKEN_ISSUER` |
+| `RTQA_SIGNIN_TOKEN_AUDIENCE` | Audience expected in reviewer tokens. | `rtqa-appliance` |  | `RTQA_REVIEWER_TOKEN_AUDIENCE` |
+| `RTQA_SIGNIN_TOKEN_LEEWAY_S` | Clock skew tolerated when checking token expiry. | `60` |  | `RTQA_REVIEWER_TOKEN_LEEWAY_SECONDS` |
+| `RTQA_SIGNIN_JWKS_REFRESH_S` | How often signing keys are refreshed. | `300` |  | `RTQA_REVIEWER_JWKS_REFRESH_SECONDS` |
+| `RTQA_SIGNIN_JWKS_OFFLINE_GRACE_S` | How long cached signing keys stay valid when Aitrium cannot be reached. | `86400` |  | `RTQA_REVIEWER_JWKS_OFFLINE_GRACE_SECONDS` |
+| `RTQA_SIGNIN_ALLOWED_ROLES` | Reviewer roles allowed to use this appliance (comma-separated). Empty means any role Aitrium grants. |  |  | `RTQA_REVIEWER_ALLOWED_ROLES` |
+| `RTQA_SIGNIN_BASIC_USERNAME` | Username for the shared local password: 'basic'/'both' sign-in, and in 'jwt' mode setup and break-glass. |  |  | `RTQA_UI_PROXY_USERNAME` |
+| `RTQA_SIGNIN_BASIC_PASSWORD` | Password for 'basic' sign-in, inline. Prefer RTQA_SIGNIN_BASIC_PASSWORD_FILE. (secret) |  |  | `RTQA_UI_PROXY_PASSWORD` |
+| `RTQA_SIGNIN_BASIC_PASSWORD_FILE` | File containing the 'basic' sign-in password. (secret) |  |  | `RTQA_UI_PROXY_PASSWORD_FILE` |
+| `RTQA_SIGNIN_LOCAL_DISPLAY_NAME` | Display name of the local account: whoever signs in with the shared local password (setup and break-glass in 'jwt' mode; everyone in 'basic'/'both'). Unset: the operating-system user the UI server runs as. |  |  | `RTQA_REVIEWER_DISPLAY_NAME` |
+| `RTQA_SIGNIN_LOCAL_ROLE` | Role of the local account (the shared local password). Unset: ADMIN in 'jwt' mode when the proxy attests the sign-in was for setup or break-glass (the only times the password works there, which need the console's administration pages); REVIEWER in 'basic'/'both', where everyone who knows the shared password is this account. ADMIN in 'basic'/'both' makes the shared password an administrator: an explicit opt-in, warned about at start-up. |  |  | `RTQA_REVIEWER_ROLE` |
+| `RTQA_SIGNIN_IDP_API_KEY` | Identity provider web API key (public; part of the browser sign-in config). |  |  | `RTQA_FIREBASE_API_KEY` |
+| `RTQA_SIGNIN_IDP_AUTH_DOMAIN` | Identity provider auth domain. |  |  | `RTQA_FIREBASE_AUTH_DOMAIN` |
+| `RTQA_SIGNIN_IDP_PROJECT_ID` | Identity provider project id. |  |  | `RTQA_FIREBASE_PROJECT_ID` |
+| `RTQA_SIGNIN_IDP_APP_ID` | Identity provider app id. |  |  | `RTQA_FIREBASE_APP_ID` |
+| `RTQA_SIGNIN_IDP_SENDER_ID` | Identity provider messaging sender id. |  |  | `RTQA_FIREBASE_MESSAGING_SENDER_ID` |
+| `RTQA_SIGNIN_RATE_LIMIT_PER_MIN` | Sign-in attempts allowed per client address per minute (0 disables the limit). | `10` |  |  |
+
+## Reviewer-facing service
+
+The UI server and the proxy in front of it: listeners, cookies, request logging.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_WEB_LISTEN_HOST` | Address the reviewer-facing proxy listens on. Keep 127.0.0.1 behind an ingress; 0.0.0.0 only with sign-in enforced. | `127.0.0.1` |  | `RTQA_UI_PROXY_HOST` |
+| `RTQA_WEB_LISTEN_PORT` | Port the reviewer-facing proxy listens on. | `8766` |  | `RTQA_UI_PROXY_PORT` |
+| `RTQA_WEB_UPSTREAM_HOST` | Loopback address of the UI server behind the proxy. Must stay local. | `127.0.0.1` |  | `RTQA_UI_HOST` |
+| `RTQA_WEB_UPSTREAM_PORT` | Port of the UI server behind the proxy. | `8765` |  | `RTQA_UI_PORT` |
+| `RTQA_WEB_COOKIE_SECURE` | Mark the session cookie Secure. Keep true behind HTTPS; false only for plain-HTTP local testing. | `true` |  | `RTQA_UI_SESSION_COOKIE_SECURE` |
+| `RTQA_WEB_REQUEST_LOG_SLOW_MS` | A request slower than this gets its own log line; the rest fold into per-minute summaries. | `2000` |  | `RTQA_UI_REQUEST_LOG_SLOW_MS` |
+| `RTQA_WEB_REQUEST_LOG_SUMMARY_S` | Length of the request-log summary window. | `60` |  | `RTQA_UI_REQUEST_LOG_SUMMARY_S` |
+| `RTQA_WEB_ACCESS_AUDIT_WINDOW_S` | Image-access audit session window: a reviewer's reads of the same study within this long of their last read are one audit record (first access, last access, count). | `1800` |  |  |
+| `RTQA_WEB_ACCESS_AUDIT_FLUSH_S` | How often buffered image-access audit records are written to the database (they are also written on shutdown). | `5` |  |  |
+| `RTQA_WEB_STREAM_CONNECTION_CAP` | Maximum concurrent live-update streams (one per open review tab). | `128` |  | `RTQA_COLLABORATION_SSE_CONNECTION_CAP` |
+| `RTQA_WEB_COLLABORATOR_CACHE_S` | How long a collaborator's eligibility answer from Aitrium is cached (0–300). | `300` |  | `RTQA_COLLABORATOR_ELIGIBILITY_CACHE_SECONDS` |
+| `RTQA_WEB_COLLABORATOR_CACHE_MAX_ENTRIES` | Maximum cached collaborator eligibility answers. | `2048` |  | `RTQA_COLLABORATOR_ELIGIBILITY_CACHE_MAX_ENTRIES` |
+| `RTQA_WEB_TRUSTED_PROXIES` | Addresses or CIDRs of the reverse proxy / load balancer in front of the appliance (comma-separated). Only these peers' X-Forwarded-For and X-Forwarded-Proto are believed. The bundled ingress sets 127.0.0.1. |  |  |  |
+| `RTQA_WEB_PUBLIC_URL` | The URL reviewers use, through the ingress (https://…). Preflight checks it answers /healthz over TLS; the sign-in cookie assumes it. |  |  |  |
+| `RTQA_WEB_CSP_MODE` | Content Security Policy: 'report-only' logs what would be blocked (start here), 'enforce' blocks it, 'off' sends no policy. | `report-only` · one of `off`, `report-only`, `enforce` |  |  |
+| `RTQA_WEB_STATUS_PAGE` | What the public /status page shows before sign-in: 'full' (version, organization and seven status lines), 'minimal' (running or setup required only), 'off' (404). Never patient data. | `full` · one of `full`, `minimal`, `off` |  |  |
+| `RTQA_WEB_CONSOLE_WRITES` | Whether signed-in administrators may change settings from the console. 'false' makes the Configuration page read-only; .env stays the record either way. | `true` |  |  |
+
+## Patient data
+
+Where received DICOM and derived files live, and when they are reclaimed.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_WORK_DIR` | Legacy umbrella directory. When the domain directories below are unset they default under it. | `./var/rtqa-appliance` |  |  |
+| `RTQA_DATA_RECEIVED_DIR` | Received DICOM per submission (patient data). | `<work dir>/source` |  | `RTQA_SOURCE_ROOT` |
+| `RTQA_DATA_STAGING_DIR` | Per-attempt working copies of DICOM (patient data). | `<work dir>/staging` |  | `RTQA_STAGING_ROOT` |
+| `RTQA_DATA_WATERMARK_SOFT_PCT` | Disk usage at which the appliance warns. | `75` |  | `RTQA_STORAGE_SOFT_WATERMARK_PCT` |
+| `RTQA_DATA_WATERMARK_HARD_PCT` | Disk usage at which the worker stops taking new work. | `90` |  | `RTQA_STORAGE_HARD_WATERMARK_PCT` |
+| `RTQA_DATA_RETENTION_DAYS` | Days after the last activity anywhere in a case's history (every submission of its lineage, and any pinned composition) before its received datasets and staging copies may be reclaimed. Last activity is the latest attempt completion, review session change (created, updated, signed off, reopened, archived), finding, note or canvas edit, and case report creation, edit or signature. Never reclaimed, whatever the age, while any part of that history is held or pinned, has an open review session or an unsigned case report, or has pending work (an ingestion running or due a retry, or a pending work order). | `30` |  | `RTQA_RETENTION_DATASET_DAYS` |
+| `RTQA_DATA_FAILED_STAGING_RETENTION_HOURS` | Hours a failed or orphaned staging copy is kept before it may be reclaimed (only a failed attempt's copy no case data points into; still never while its case history is held, pinned, under review or has pending work). | `24` |  | `RTQA_RETENTION_FAILED_STAGING_HOURS` |
+| `RTQA_DATA_RECLAIM_AUTOMATIC` | Reclaim expired data automatically: between work orders, at most once every 24 hours (and at most hourly while the disk is at the hard watermark), the worker deletes what `rtqa-appliance cleanup --apply` would. Each candidate is rechecked under its lock, anything an import holds is skipped, and every deletion is audited before and after it; with no writable audit log nothing is deleted. Off by default for now (set 'true' to opt in); the default is planned to change to on once validated. 'false' leaves reclaim to the manual command. | `false` |  |  |
+
+## Review state
+
+The database that holds patients, cases, findings and sessions.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_STATE_DIR` | The review-state database directory. Must be local block storage, never a network filesystem (the preflight blocks NFS/SMB). The appliance does not encrypt it or check that the disk is encrypted: put it on a volume the host encrypts. | `<work dir>/state` |  |  |
+
+## Application
+
+Models and assistant assets.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_APP_MODEL_DIR` | Where model weights are stored. | `<work dir>/models` |  | `RTQA_MODEL_DIR` |
+| `RTQA_APP_ASSETS_DIR` | Optional directory of assistant assets (prompt packs) overriding the packaged ones. |  |  | `RTQA_WORKSPACE_ASSETS_ROOT` |
+
+## Deliveries
+
+How submissions reach the appliance.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_INGEST_FETCH_ENABLED` | Allow the worker to fetch deliveries (SFTP). False means only local deliveries are used. | `true` |  | `RTQA_INGRESS_FETCH_ENABLED` |
+| `RTQA_INGEST_CONNECT_TIMEOUT_S` | Seconds to wait for each address of the SFTP delivery host to accept a connection before trying the next. | `20` |  |  |
+| `RTQA_INGEST_FETCH_ATTEMPTS` | How many times a delivery download is attempted when the connection fails (not when the file is missing or the login is refused). | `3` |  |  |
+| `RTQA_INGEST_RETRY_ATTEMPTS` | How many times a failed ingestion (download or analysis) is retried by the appliance on its own before it asks for a hand. | `3` |  |  |
+| `RTQA_INGEST_RETRY_BACKOFF_S` | Seconds to wait before each automatic ingestion retry, comma-separated per attempt; the last value repeats. | `120,600,1800` |  |  |
+| `RTQA_INGEST_STAGE_BUDGET_S` | Longest a single ingestion step may run, comma-separated as step=seconds for the steps protocol, data, analysis and report. A step that runs longer is cancelled and the submission is retried like any other failure; a run the worker lost track of is closed once it is twice its budget old. 0 leaves a step unbounded. | `protocol=120,data=1800,analysis=1800,report=300` |  |  |
+| `RTQA_INGEST_KEEP_ARCHIVES` | Keep the downloaded archive next to the extracted delivery. | `true` |  | `RTQA_INGRESS_CACHE_ARCHIVES` |
+| `RTQA_INGEST_EXTRA_ROOTS` | Additional directories searched for a delivery by submission id (colon-separated). |  |  | `RTQA_INGRESS_LOCAL_OVERRIDE_ROOTS` |
+| `RTQA_INGEST_SFTP_CREDENTIALS_FILE` | Credentials file for self-managed SFTP deliveries. (secret) |  |  | `RTQA_LOCAL_INGRESS_CREDENTIALS_FILE` |
+| `RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT` | Expected SSH host key of the SFTP delivery host, as `ssh-keygen -lf` prints it (SHA256:…). One value applies to every delivery host; with more than one host, give host[:port]=SHA256:… entries, comma-separated (IPv6 in brackets: [fe80::1]:22=SHA256:…). A malformed value (an empty entry, a bad host or port, an invalid fingerprint) stops the appliance from starting; it is never ignored. A pinned host must present this key on every connection, the first included. Unset: the first connection to each host records its key (trust on first use) and later connections must present the same key; a changed key refuses the transfer until IT verifies the new fingerprint with the delivery provider and runs `aitrium-rtqa sftp host-key accept`. |  |  | `RTQA_SFTP_HOST_KEY_FINGERPRINT` |
+| `RTQA_INGEST_MAX_EXPANDED_GB` | Largest a delivered archive may unpack to, in gigabytes (10^9 bytes). An archive that would unpack to more is refused before anything is written. Separately, an archive that would push the dataset's disk past RTQA_DATA_WATERMARK_HARD_PCT is refused. Default 20: about 3x the largest production delivery seen (7.4 GB, Oct 2026). | `20` |  |  |
+| `RTQA_INGEST_MAX_EXPANSION_RATIO` | Largest ratio of unpacked size to archive size a delivery may have, once it unpacks past RTQA_INGEST_RATIO_FLOOR_GB. Real scan data compresses a few times at most; far more is a sign of a decompression bomb. | `200` |  |  |
+| `RTQA_INGEST_RATIO_FLOOR_GB` | Unpacked size, in gigabytes (10^9 bytes), below which RTQA_INGEST_MAX_EXPANSION_RATIO is not applied, so small, highly compressible deliveries are never refused for their ratio. | `1` |  |  |
+| `RTQA_INGEST_MAX_ENTRIES` | Most files and folders one delivered archive may hold. | `200000` |  |  |
+| `RTQA_INGEST_MAX_PATH_DEPTH` | Deepest folder nesting allowed inside a delivered archive, counted in path segments. | `32` |  |  |
+| `RTQA_INGEST_READ_TIMEOUT_S` | Seconds an SFTP delivery download may wait for the server to send data before the read fails and the download is retried. | `120` |  |  |
+| `RTQA_INGEST_LOCK_TIMEOUT_S` | Longest an import waits, in seconds, for another import of the same delivery to finish with it (never longer than the step's own budget). Past it the import is retried later. | `300` |  |  |
+
+## Assistant
+
+The optional local language model.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_ASSISTANT_PROFILE` | 'review': no local model — deterministic QA, review, sign-off and reports only; no GPU, no model download. 'assisted': the local assistant runs on a GPU. The installer writes 'review' by default; an existing .env without this key keeps 'assisted'. | `assisted` · one of `review`, `assisted` |  |  |
+| `RTQA_POLICY_EVALUATION_MODE` | How the published QA policy is evaluated: deterministic (the engine alone decides every rule; unresolved rules go to the reviewer) or agent_assisted (the agent roles may resolve what the engine cannot; a role failure still finalises from the ledger). | `deterministic` · one of `deterministic`, `agent_assisted` |  |  |
+| `RTQA_ASSISTANT_PROVIDER` | Inference provider for the assistant. 'llama_cpp' is the only provider today. | `llama_cpp` · one of `llama_cpp` |  | `RTQA_PROVIDER_TYPE` |
+| `RTQA_ASSISTANT_RUNTIME_MODE` | 'managed': the appliance starts and owns the model server; 'external': the site runs it. | `managed` · one of `managed`, `external` |  | `RTQA_RUNTIME_MODE` |
+| `RTQA_ASSISTANT_ENDPOINT` | URL of the model server. | `http://127.0.0.1:8080` |  | `RTQA_LLAMA_CPP_ENDPOINT` |
+| `RTQA_ASSISTANT_TIMEOUT_S` | Timeout for a model request. Unset means no limit. |  |  | `RTQA_LLAMA_CPP_TIMEOUT_SECONDS` |
+| `RTQA_ASSISTANT_RUNTIME_VERSION` | Pinned model-server release, written by the installer. |  |  | `RTQA_LLAMA_CPP_VERSION` |
+| `RTQA_ASSISTANT_REPORT_TIMEOUT_S` | Timeout for assistant-generated report sections. | `240` |  | `RTQA_REPORT_TIMEOUT_SECONDS` |
+| `RTQA_ASSISTANT_MODEL_AUDIT_MODE` | How much of the model's input and output is written to the audit trail. | `summary` · one of `off`, `summary`, `full` |  | `RTQA_MODEL_AUDIT_MODE` |
+| `RTQA_ASSISTANT_PROMPT_PACK_VERSION` | Pin a prompt-pack version. Defaults to the workspace version. |  |  | `RTQA_PROMPT_PACK_VERSION` |
+| `RTQA_ASSISTANT_WORKSPACE_ID` | Assistant workspace id (prompt pack family). | `rtqa-default` |  | `RTQA_WORKSPACE_ID` |
+| `RTQA_ASSISTANT_WORKSPACE_VERSION` | Assistant workspace version. | `1.6.5` |  | `RTQA_WORKSPACE_VERSION` |
+
+## Analysis toolkit
+
+The radiotherapy analysis engine the appliance drives.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_TOOLKIT_COMMAND` | The radiotherapy analysis server command (installed by the installer). |  | yes | `RTQA_RADIOTHERAPY_MCP_COMMAND` |
+| `RTQA_TOOLKIT_ARGS` | Extra arguments for the analysis server (shell words or a JSON list). |  |  | `RTQA_RADIOTHERAPY_MCP_ARGS` |
+| `RTQA_TOOLKIT_ENV_JSON` | Extra environment for the analysis server, as a JSON object. | `{}` |  | `RTQA_RADIOTHERAPY_MCP_ENV_JSON` |
+
+## Outbound network
+
+How the appliance reaches Aitrium, the release manifest and (assisted profile only) model hosts through the hospital's outbound proxy. Explicit values win over the HTTPS_PROXY / NO_PROXY / SSL_CERT_FILE environment, which is the fallback.
+
+| Key | Meaning | Default | Required | Was |
+|---|---|---|---|---|
+| `RTQA_NETWORK_PROXY_URL` | Outbound HTTP(S) proxy for every call the appliance makes to Aitrium, the release manifest and model hosts, e.g. http://user:pass@proxy.hospital.example:3128. Credentials in it are never printed; percent-encode any / ? # @ : in the username or password. Prefer RTQA_NETWORK_PROXY_URL_FILE when it holds a password. Unset falls back to HTTPS_PROXY / HTTP_PROXY; unset everywhere means direct. (secret) |  |  |  |
+| `RTQA_NETWORK_PROXY_URL_FILE` | File containing the proxy URL (mode 0600), for a proxy URL that carries credentials. Wins over the inline value when both are set (the start-up check warns). (secret) |  |  |  |
+| `RTQA_NETWORK_NO_PROXY` | Hosts, domain suffixes (.hospital.example) or CIDRs reached directly, never through the proxy (comma-separated). localhost, 127.0.0.1, ::1 and a model server on this host are always direct; a remote model server goes through the proxy. NO_PROXY from the environment is added. |  |  |  |
+| `RTQA_NETWORK_CA_BUNDLE_FILE` | PEM file of extra certificate authorities to trust for outbound TLS, e.g. the hospital's TLS-inspecting proxy CA. ADDED to the default trust store, never a replacement. Unset falls back to SSL_CERT_FILE / REQUESTS_CA_BUNDLE (also added). |  |  |  |
+| `RTQA_NETWORK_SFTP_VIA_PROXY` | Reach SFTP delivery hosts through the outbound proxy with an HTTP CONNECT tunnel (the proxy must allow CONNECT to the delivery port). Off: SFTP needs a direct route to the delivery host or the site's own relay. Hosts on the no-proxy list are always direct. | `false` |  |  |
+
+## Launcher and developer variables (not appliance settings)
+
+| Variable | Meaning |
+|---|---|
+| `RTQA_SIGNIN_ALLOWED_ORGS` | Developer only: pin the organization for a first start that cannot reach Aitrium. The organization an appliance serves is assigned by Aitrium; this never widens it. |
+| `RTQA_CONFIG` | Path to the .env the launchers source (installer wrapper). |
+| `RTQA_APPLIANCE_BIN` | Path to the rtqa-appliance CLI the wrapper drives. |
+| `RTQA_WORKER_LAUNCH_MODE` | Set by the launchers: direct, managed_detached or systemd. |
+| `RTQA_MODEL_FILE` | Selected model file name (installer). |
+| `RTQA_MODEL_PATH` | Absolute model path passed to the model server (launcher). |
+| `RTQA_CONTEXT_SIZE` | Model context size passed to the model server (launcher). |
+| `RTQA_LLAMA_PORT` | Model server port (launcher). |
+| `RTQA_LLAMA_CPP_BIN` | Model server binary (launcher). |
+| `RTQA_BIN_DIR` | Installed binaries directory (installer). |
+| `RTQA_PERSISTENCE_AUTO_MIGRATE` | Developer only: migrate the state database on start. |
+| `RTQA_ASSISTANT_HARNESS` | Developer only: assistant evaluation harness selection. |
+| `RTQA_REVIEWER_USER_ID / _ORG_ID / _SITE_ID` | Developer only: local reviewer identity when no proxy injects one. |

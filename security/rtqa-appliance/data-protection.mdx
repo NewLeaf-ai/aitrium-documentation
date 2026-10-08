@@ -1,0 +1,156 @@
+---
+title: "Data Protection"
+description: "Encryption in transit and at rest, the service account and hardened units, audit and logging, and retention and deletion on the Aitrium RTQA appliance."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Security and compliance reviewers · Hospital IT" />
+
+## Encryption
+
+### In transit
+
+| Path | Protection | Set by |
+|---|---|---|
+| Browser → edge | TLS, terminated by the built-in edge (Caddy) with your certificate. The edge sets no protocol or cipher options of its own, so Caddy's defaults apply. Plain HTTP on port 80 only redirects to https. Without a certificate, the edge uses a self-signed one: fine for testing, not for reviewers. | Your certificate, given at install |
+| Edge → proxy → UI server | Plain HTTP on the loopback interface, inside the host. The proxy → UI server hop carries the proxy secret for identity headers. The edge → proxy hop and the UI server → model server hop are not authenticated. | Loopback binds |
+| Appliance → control plane, signing keys, release manifest, model hosts, REDCap, a remote model server | For `https://` URLs, TLS with certificates verified against the bundled CA store, the system store, and any extra CA you add (`RTQA_NETWORK_CA_BUNDLE_FILE`). There is no option to turn verification off. The clients do not themselves refuse an `http://` URL: the control-plane URL, a REDCap URL, a remote model endpoint, and the update check's redirects are used as configured or supplied. Confirm each is https. | Configuration |
+| Appliance → SFTP delivery host | SSH, with the server's host key verified before any credential is sent (below) | Configuration |
+| Delivery credentials from the control plane | TLS, plus AES-GCM encryption of the credential payload in the API response | Built in |
+| Installer and updater downloads | https only, redirects too (`file://` allowed for local mirrors). OS packages that a llama.cpp source build may install come through the host's own package manager. | Built in |
+
+The control-plane URL Aitrium issues is https. The appliance does not refuse a plain `http://` value in `RTQA_SITE_API_URL`, so confirm it.
+
+**Response headers.** The proxy sends `Strict-Transport-Security` (one year, when served over https), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, and a Content Security Policy that is **report-only by default**. Set `RTQA_WEB_CSP_MODE=enforce` to enforce it.
+
+### SFTP host keys
+
+The appliance runs the SSH handshake in three steps: key exchange, then the host-key check, then authentication. The username and any password or key are sent only after the host key passes.
+
+- **Trust on first use.** The first key a host and port presents is recorded (its type and OpenSSH `SHA256:` fingerprint) in `<state dir>/sftp-host-keys.json` (mode 0600). Every later connection must match it.
+- **Pinning (recommended).** `RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT=SHA256:…`, or `host[:port]=SHA256:…` entries for several hosts, pins the key. A pinned host must match on every connection, the first included, and the pin wins over the record. A malformed pin stops the appliance from starting. Ask the delivery provider for the fingerprint.
+- **A mismatch** refuses the download with `input_sftp_host_key_changed`, and it is not retried. IT verifies the new fingerprint with the provider and accepts it with `aitrium-rtqa sftp host-key accept --host <host> [--port <port>] --fingerprint SHA256:…`. The fingerprint must equal the one the host last presented. `show` prints the recorded and presented keys; `forget` removes a record.
+- **Audited.** Accepting and forgetting are logged and written to the audit table, with the operating-system user as the actor.
+- **Fails closed.** An invalid record refuses that host and is never re-trusted on first use. A record file that cannot be read refuses every host until each is recovered with its own `accept` or `forget`. The old file is kept, and the reset is audited.
+
+### At rest
+
+**What the appliance does:**
+
+- Creates the state directory with mode `0700` and the database file with `0600`.
+- Writes results, reports, and exports through helpers that create `0640` files in `0750` directories, through a private temporary file renamed into place, so a file is never readable with a looser mode, even briefly. Not every patient-data write goes through these helpers: for example, the REDCap supplemental-input file in staging follows the process umask (`0027` under the hardened units, so `0640`).
+- Unpacks received DICOM into a private `0700` directory, sets `0750` and `0640` explicitly, then moves it into place.
+- Keeps `.env` at `0600`, `secrets/` at `0700`, and the setup token at `0600`. Secret files that others can write, that are owned by anyone other than root or the appliance's account, or that sit in a directory others can swap them in, are refused.
+- Creates database backups with restricted permissions. Their manifest says `contains_phi: true`.
+
+**What the appliance does not do:**
+
+- **It does not encrypt data at rest.** The database, the received DICOM, staging copies, attempt results, logs, and backups are stored unencrypted on the file system.
+- **It does not check that the disk is encrypted.** The preflight checks the file system type (to keep the database off NFS and SMB), not encryption.
+
+**What you provide:** full-disk or volume encryption (for example LUKS/dm-crypt, or your hypervisor's or cloud provider's encrypted volumes) for every volume holding the work directory, state, received, staging, and backups; and an encrypted destination for database backups and support exports.
+
+File modes are access controls, not encryption. They keep other local accounts out. They do not protect against root or the service account itself.
+
+## The service account and hardened units
+
+Run as root on Linux, the installer creates an unprivileged system user and group, `aitrium-rtqa` (`--service-user` chooses another name), with no login shell and its home at the work directory. The worker, UI server, proxy, model server, and built-in edge all run as that account.
+
+<Warning>
+  **These guarantees hold only when the service-account install or migration succeeded.** A new install the account cannot reach (for example under `/root`) stops before installing anything. An **existing** install whose work directory the account cannot reach keeps running its services as **root**, with a warning. Under that fallback the units are still sandboxed, but they keep root's capabilities. Verify each deployment with `aitrium-rtqa preflight` (the **Service user** check), the install record's `RTQA_INSTALL_SERVICE_USER` and `RTQA_INSTALL_SERVICE_MIGRATION=complete`, and `systemctl show -p User aitrium-rtqa-ui.service`.
+</Warning>
+
+**Ownership.** The work directory is `root:aitrium-rtqa` with mode `1770`: the account can create its own files there but, with the sticky bit, cannot rename root's. The account owns its data: `state/` and `secrets/` (`0700`), `inbox/`, `staging/`, `work/`, `models/`, `logs/`, `network/`, `ingress/` (`0750`), and `.env`, `setup-token`, and `setup-complete` (`0600`). Root keeps the code and configuration the services run: `bin/`, `venv/`, `systemd/`, the install record, the model pins, the edge's Caddyfile (`root:aitrium-rtqa 0640`), and the assistant install ledger `components/` (`root:aitrium-rtqa 2750`; the services may read it, never write it).
+
+**Hardened units.** Every unit sets `User=` and `Group=`, `NoNewPrivileges=yes`, `PrivateTmp=yes`, `ProtectSystem=strict` with `ReadWritePaths=` only the work, state, received, staging, and model directories (`ReadOnlyPaths=` the units and the ledger), `ProtectHome=yes` (`read-only` when an install path is under `/home`, `/root`, or `/run/user`), `PrivateDevices=yes` (not the model server, which needs the GPU), kernel, cgroup, clock, and hostname protection, `RestrictSUIDSGID`, `RestrictRealtime`, `RestrictNamespaces`, `LockPersonality`, native system calls only, address families `AF_UNIX AF_INET AF_INET6 AF_NETLINK`, `UMask=0027`, and, with a service account, an empty `CapabilityBoundingSet=`. The edge keeps exactly one capability, `CAP_NET_BIND_SERVICE`, to bind 443 and 80. The units carry no `EnvironmentFile=` (systemd would read the `.env` as root); the launchers read it as the account and refuse to run as root. For the assisted profile, the account joins `video` and `render`, and a polkit rule lets exactly that account start, stop, and restart the model server unit, and nothing else.
+
+**Root does not consume what the service account can write.** In the hardened path, root does not read the account's configuration or run its code. Two kinds of exception remain: the one-time migration of an existing install changes the owner of the account's data, and root reads and validates the results of steps it ran as the account (for example, a model download's report). In particular:
+
+- Everything root acts on comes from the root-owned install record and the installer's options, never from `.env`: the data locations, the proxy port and address, the outbound proxy and CA for root's downloads, and the service account. Once a service account is recorded, root never trusts the `.env` again.
+- Root's Python always runs isolated. Before root runs or copies anything from the install record, the virtual environment, the bin directory, the unit sources, or the command-line tool, each must be root's from `/` down and writable by nobody else.
+- An `--env-file`, and any proxy or CA file root reads, must be root's from `/` down.
+- As root, the appliance's command-line tool only maintains the install record and the assistant's install ledger. Everything else runs as the service account (see [Troubleshooting: root_refused](/rtqa-appliance/troubleshooting#root_refused)).
+- An existing install moves to the service account on its next install or update. The account's processes are stopped and its login is locked out during the move, and each data location is re-owned without following symbolic links, so a planted link cannot redirect it.
+
+## Audit and logging
+
+### Image access, per study opened
+
+One audit row per **user × case × study × session window**: when a reviewer opens a study in the viewer, the appliance records it. Repeated reads of the same study by the same reviewer within 30 minutes of their last read (`RTQA_WEB_ACCESS_AUDIT_WINDOW_S`, default 1800) extend the same row. Each row holds the user ID and the reviewer's display name and email from the sign-in, the organization, the local case ID and its case lineage ID, the StudyInstanceUID, the first and last access, and a count.
+
+The viewer sends a "study opened" signal, because the browser caches images for a year and a cached reopen never reaches a file route. A hook on the DICOM file route is the fallback. The server checks the signal: the case must be in the caller's organization, and the study must be one the server has served on that path. Rows are buffered and written every 5 seconds and on shutdown. This is a buffered audit: hits still in memory can be lost if the process crashes or the database cannot be written.
+
+Each new row is also logged once as a JSON line, `"message": "rtqa.audit.image_access"`, with the access ID, organization, user, display name, email, case and lineage IDs, StudyInstanceUID, first access time, and window. It carries no patient name or patient ID, but it does carry the StudyInstanceUID. If your policy treats DICOM UIDs as identifiers, handle the log stream accordingly.
+
+**Export:** `GET /api/admin/access-audit?case=&user=&since=&until=&limit=&cursor=`, for platform administrators, own organization only, newest first, paged. There is no console page for it in this release.
+
+**Retention:** kept for the life of the case. Cases are never deleted in this release, so in practice these rows are kept indefinitely.
+
+### Other audit records
+
+| Event | Record |
+|---|---|
+| Break-glass sign-in | Always a log line (`rtqa.audit.break_glass_signin`: user, time, source address, path, window end; no secrets). A database row on a best-effort basis: if the database write fails, the sign-in still succeeds and only the log line remains. Coalesced to one per user and address per 10 minutes, plus one for every explicit local sign-in. |
+| Turning break-glass on or off, setup closing | Log lines |
+| Storage reclaim | A database row before each deletion and one after it, plus a batch row per run. If an audit row cannot be written, nothing more is deleted. The rows hold IDs, bytes, reason codes, and times, never a path. Automatic reclaim also logs each removal in the worker log. |
+| SFTP host key accepted, forgotten, or store reset | A log line and a database row |
+| Review sessions, membership grants and revocations, owner transfers, case report saves and sign-off, reviewer-defined rules and metrics, dataset publication, assistant policy changes and plan confirmations, assistant conversation deletion and purge | Database rows |
+| Every SQL console query, and every refused attempt | Database rows |
+| Configuration changes from the console | A log line with the user, the keys changed, and the backup file |
+
+The proxy also keeps the last 500 events (sign-ins and denials, throttling, request summaries, setup-mode changes) in memory for the console's Overview. They are lost on restart; the proxy log is the durable record.
+
+**Tamper resistance.** Audit rows live in the same database as the review state. They are not hash-chained or write-once, and an administrator of the host could change them.
+
+**Logs and the audit table are different streams.** Most audit rows are written to the database only, with no matching log line. Shipping the logs to a SIEM captures the events the logs carry (sign-ins, image access, break-glass, configuration writes, and the worker's reclaim events), not the whole audit ledger. To keep the ledger outside the appliance's control, back up the database as well.
+
+The appliance has no built-in syslog or SIEM forwarding, and does not rotate the log files it writes without systemd (only the edge's log is rolled). For log locations and formats, see [Operations: Logs](/rtqa-appliance/operations#logs).
+
+## Retention and deletion
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `RTQA_DATA_RETENTION_DAYS` | 30 | Days after a case's last activity before its received data may be reclaimed |
+| `RTQA_DATA_FAILED_STAGING_RETENTION_HOURS` | 24 | Hours a failed or orphaned staging copy is kept before it may be reclaimed |
+| `RTQA_DATA_WATERMARK_SOFT_PCT` | 75 | Disk use at which the appliance warns |
+| `RTQA_DATA_WATERMARK_HARD_PCT` | 90 | Disk use at which the worker stops taking new work. An incoming archive that would push the disk past it is refused. |
+| `RTQA_DATA_RECLAIM_AUTOMATIC` | `false` | Whether the worker reclaims expired data on its own |
+| `RTQA_INGEST_MAX_EXPANDED_GB` | 20 | The largest a delivered archive may unpack to (10^9 bytes). A larger one is refused before anything is written. Further caps limit entries, path depth, and expansion ratio. |
+
+Reclaim only ever removes **received deliveries and staging copies**. It never removes the review-state database, cases, findings, reports, the received-case catalog, or audit records. It also does not remove the attempt results and logs under `work/`, the assistant's model audit trail in the database, browser caches, or files exported to workstations.
+
+**Retention is eligibility, not a deadline.** `RTQA_DATA_RETENTION_DAYS` says when data **may** be reclaimed. Nothing is removed unless reclaim runs (by hand, or automatically if turned on) and nothing blocks it, so data can stay much longer. Reclaim deletes files in the ordinary way; it is not secure media erasure.
+
+### What reclaim protects
+
+Manual and automatic reclaim use the same rules, applied both to the plan and to a re-check just before each deletion.
+
+- Retention belongs to the **whole case history**: every submission of the case's lineage, its review sessions and their pinned dataset, reports, and ingestion runs.
+- Nothing in that history is reclaimed, whatever its age, while any part of it:
+  - is **held** or **pinned for review**;
+  - has an **open review session** (not signed off, not archived);
+  - has an **unsigned case report** (never signed, or edited since signing);
+  - has **pending work**: an ingestion running or due a retry, or a pending work order at the control plane. If the control plane cannot be asked, every received delivery is kept;
+  - has a timestamp, case manifest, or attempt record that cannot be read or is incomplete;
+  - is being imported, or is being read by a computation.
+- Otherwise the history's last activity must be older than `RTQA_DATA_RETENTION_DAYS`. A failed attempt's staging copy that no case data points into, and a genuinely orphaned staging copy, use `RTQA_DATA_FAILED_STAGING_RETENTION_HOURS` instead. Every blocker above still applies.
+- It **fails closed**: if the state database is absent, or the review facts, pending ingestions, or lineage cannot be read, nothing is eligible.
+- While a deletion is in flight, a clinical write on that history (a session created or reopened, a finding, a report edit, a retry) is refused with `409 imaging_reclaim_in_progress`.
+
+### Automatic reclaim (off by default)
+
+Automatic daily reclaim is built and shipped, but **off by default** until it has been validated; the default is planned to change to on after that. A site opts in with `RTQA_DATA_RECLAIM_AUTOMATIC=true`. When on, the worker runs the same reclaim between work orders (never during one), at most once every 24 hours, and at most hourly while the disk is at the hard watermark. A failure is logged and retried at the next slot.
+
+To reclaim by hand, see [Operations: Storage and retention](/rtqa-appliance/operations#storage-and-retention).
+
+When a case's imaging is reclaimed, a record is kept (case ID, storage class, bytes, time, reason; never a path). The viewer then says the imaging was reclaimed under the retention policy, and on which date.
+
+### Assistant conversations
+
+Assistant conversations have their own retention, set per organization in the assistant policy: 7, 30, 90, or 365 days, or kept. The default is 30 days. Expired conversations are deleted automatically, with an audit row for each.
+
+### What is not provided
+
+- **No case deletion or right-to-erasure path.** This release never deletes a case, its case report, or audit rows. The one clinical deletion it offers is narrow: a platform administrator who is a member of an archived review session may permanently delete that session and its own state (archive first, then delete with a note). A signed-off session can never be deleted, and each deletion is audited. If the trial's data-management plan needs deletion at study close, arrange it with Aitrium.
+- **No retention for logs or backups.** Your organization sets those.

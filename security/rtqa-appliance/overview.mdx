@@ -1,0 +1,109 @@
+---
+title: "RTQA Appliance Security Overview"
+description: "Security reference for the Aitrium RTQA appliance, the on-premises QA review server, for IT and Information Security teams."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Security and compliance reviewers · Trial organization IT · Hospital IT" />
+
+The Aitrium RTQA appliance is software for radiotherapy clinical-trial quality assurance (QA). The trial's QA reviewers use it in a browser to look at a submitted treatment plan (images, contours, dose), record findings, and sign a case report. Deterministic QA checks run on the appliance and are shown as context.
+
+It runs on a Linux x86_64 server or VM that your organization provides and secures, inside your network. It is not a SaaS service. Reviewers reach it over your LAN through an HTTPS edge. It reports to Aitrium's control plane over outbound HTTPS, and the control plane never connects in.
+
+**What it holds.** The trial's radiotherapy DICOM delivered for each case (CT, RTSTRUCT, RTPLAN, RTDOSE), working copies of it, the QA results derived from it, and a local review-state database (review sessions, findings, case reports, audit records). The appliance is designed to receive de-identified (pseudonymized) trial data, but it does **not** de-identify anything itself. Treat everything it stores as PHI.
+
+<Note>
+  This section describes the current release of the appliance. Where the appliance does not provide something, the page says so and says what your organization is expected to provide. The limits that matter most for a review are collected on one page: [Known limits](/security/rtqa-appliance/known-limits).
+</Note>
+
+## Security posture at a glance
+
+<CardGroup cols={2}>
+  <Card title="Raw DICOM stays on your host" icon="hard-drive">
+    Raw DICOM is never uploaded through the control-plane API. What the appliance sends Aitrium is restricted by a typed allow-list: case-linked derived results such as grades, counts, reason codes, and bounded measurement values. Two fields carry text a person types, and other paths are disclosed: the trial's SFTP and REDCap services, a remote model server if you configure one, and reviewer workstations. See [Data flows](/security/rtqa-appliance/data-flows).
+  </Card>
+  <Card title="No AI model by default" icon="cpu">
+    A default install (the review profile) contains no large-language-model component: no model weights, no llama.cpp binary, no model-server service, and no Hugging Face client library. `aitrium-rtqa components --json` reports what is actually present. An optional assistant can be added later. By default it runs on the appliance with a local model; a site can instead point it at a remote model server, which then receives the assistant's requests.
+  </Card>
+  <Card title="Least privilege on the host" icon="user-check">
+    Installed as root on Linux, the services run as a dedicated, unprivileged account, `aitrium-rtqa`, in hardened systemd units. Root does not source the account's configuration or run its code. **Caveat:** an existing install whose work directory that account cannot reach keeps running its services as root, with a warning, until it is moved. Check the outcome on each deployment.
+  </Card>
+  <Card title="Signed releases" icon="badge-check">
+    Releases are signed with Sigstore keyless signing in Aitrium's release workflow. Signatures are checked at install time only when `cosign` is installed on the host: the installer checks the manifest and the appliance package, and an update checks the manifest and the installer it runs. Other downloads are checked against checksums in the manifest. See [Supply chain](/security/rtqa-appliance/supply-chain).
+  </Card>
+  <Card title="Outbound only" icon="arrow-up-right">
+    The appliance polls Aitrium for work. Aitrium has no inbound path to it. Expose only the HTTPS edge (443, and 80 for the redirect) to your network.
+  </Card>
+  <Card title="Only the proxy asserts identity" icon="key-round">
+    The internal UI server listens on loopback only and believes identity headers only when they come with a secret that the reviewer proxy holds. SFTP delivery hosts are verified by their SSH host key before any credential is sent.
+  </Card>
+</CardGroup>
+
+## Security reference
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/security/rtqa-appliance/architecture">
+    Processes, storage zones, and how data moves between them.
+  </Card>
+  <Card title="Data flows and network" icon="route" href="/security/rtqa-appliance/data-flows">
+    What leaves the box and by which path, the egress allowlist, inbound ports, and proxy support.
+  </Card>
+  <Card title="Access management" icon="users" href="/security/rtqa-appliance/access-management">
+    Reviewer sign-in, roles, the shared local password, and session limits.
+  </Card>
+  <Card title="Data protection" icon="lock" href="/security/rtqa-appliance/data-protection">
+    Encryption, the service account and hardened units, audit and logging, retention and deletion.
+  </Card>
+  <Card title="Supply chain" icon="package-check" href="/security/rtqa-appliance/supply-chain">
+    How each download is verified, updates, rollback, and SBOMs.
+  </Card>
+  <Card title="Known limits" icon="triangle-alert" href="/security/rtqa-appliance/known-limits">
+    Current behavior a reviewer should weigh, stated plainly.
+  </Card>
+  <Card title="Security questionnaire" icon="clipboard-check" href="/security/rtqa-appliance/questionnaire">
+    Pre-filled answers in the domains of SIG Lite and CSA CAIQ.
+  </Card>
+</CardGroup>
+
+## What you provide
+
+| Area | Your organization provides |
+|---|---|
+| **Host** | A Linux x86_64 host or VM that meets the [system requirements](/rtqa-appliance/requirements); OS patching, hardening, and antivirus or EDR under your policy |
+| **Service account** | Nothing to create: the installer, run as root, creates `aitrium-rtqa`. Allow a system account with no login shell under your account policy. After each install or update, verify that the services really run as it. |
+| **Disk encryption** | Full-disk or volume encryption for the work directory (including `work/` and `logs/`), the review-state, received, staging, and model locations, and backups |
+| **TLS** | The edge certificate and key, and their renewal |
+| **Firewall** | Inbound: only the edge port(s). Outbound: the destinations in [Data flows](/security/rtqa-appliance/data-flows#egress-allowlist), plus the trial's SFTP host, its REDCap host if used, and a remote model server if configured. The appliance does not enforce an allowlist itself. |
+| **Workstations** | Protection of what reviewers' browsers hold: cached DICOM (kept for up to a year), downloaded and printed reports, and SQL console CSV exports. Disk encryption, browser cache policy, print handling, managed devices. A reverse proxy in front of the appliance should not cache DICOM responses. |
+| **Local accounts on the host** | Keep interactive accounts on the appliance host to administrators. A local process can reach the UI server's loopback port as the local account. |
+| **Outbound proxy** | Its address, credentials, and CA, if you use one |
+| **Time** | NTP or equivalent time synchronization |
+| **Backups** | Scheduled database backups to an encrypted destination, and their retention; a separate decision for the files the backup does not cover (received, staging, `work/`) |
+| **Logs** | Forwarding to your SIEM, and rotation and retention of log files |
+| **cosign** | Installing `cosign` so release signatures are verified (recommended), and verifying the first `install.sh` before running it |
+| **Package mirror** | Optional: an internal https PyPI mirror |
+| **Physical security and disposal** | Of the host and its disks |
+| **Accounts** | Asking Aitrium to create and remove reviewer accounts; deciding who is an administrator |
+| **SFTP host key** | Recommended: the delivery host's SSH fingerprint from the provider, to pin it; verifying any changed key with the provider before accepting it |
+
+## Not in this release
+
+- **Single sign-on through your own identity provider** is planned. Until then, reviewers sign in with Aitrium accounts.
+- **Automatic daily storage reclaim** is built but ships turned off until it has been validated. See [Retention and deletion](/security/rtqa-appliance/data-protection#retention-and-deletion).
+- **A supported container package.** The appliance installs directly on the host.
+
+## Guides for IT teams
+
+<CardGroup cols={2}>
+  <Card title="IT setup checklist" icon="monitor-cog" href="/rtqa-appliance/it-setup">
+    Host, network, TLS, install, setup, acceptance, backups, and monitoring.
+  </Card>
+  <Card title="Install guide" icon="download" href="/rtqa-appliance/install">
+    Inputs, the installer, the service account, TLS, and first-run setup.
+  </Card>
+</CardGroup>
+
+<Note>
+  For a detailed security review, or for release evidence such as the release manifest, signature verification results, SBOMs, and CI results for the release you install, contact [support@aitriumos.com](mailto:support@aitriumos.com).
+</Note>

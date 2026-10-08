@@ -1,0 +1,294 @@
+---
+title: "Install guide"
+description: "Install the Aitrium RTQA appliance on a Linux host, complete first-run setup, and confirm it is ready for reviewers."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Trial organization IT · Hospital IT hosting the appliance" />
+
+This guide installs the Aitrium RTQA appliance on a Linux x86_64 host, as root, with the built-in TLS edge. It takes you from a prepared host to an appliance that reviewers can sign in to.
+
+Before you start, check the host against the [system requirements](/rtqa-appliance/requirements).
+
+<Note>
+  Paths on this page assume the default work directory, `/opt/aitrium/rtqa`. The operator command, `aitrium-rtqa`, is installed at `/opt/aitrium/rtqa/bin/aitrium-rtqa`. That folder is not on the `PATH`, so the examples use the full path.
+</Note>
+
+## 1. Gather the inputs
+
+### From Aitrium
+
+Aitrium sends these at onboarding. Keep the client secret as you would any credential.
+
+| Value | Setting |
+|---|---|
+| The release version to install | `--version` on the installer |
+| Aitrium API URL (the control plane this appliance reports to) | `RTQA_SITE_API_URL` |
+| Client ID | `RTQA_SITE_CLIENT_ID` |
+| Client secret | Stored in a file named by `RTQA_SITE_CLIENT_SECRET_FILE` |
+| Deployment ID | `RTQA_SITE_DEPLOYMENT_ID` |
+| Appliance ID | `RTQA_SITE_APPLIANCE_ID` |
+| Token path, only if Aitrium says it differs from the default | `RTQA_SITE_TOKEN_PATH` |
+| Reviewer sign-in provider values (public, not secret) | `RTQA_SIGNIN_IDP_API_KEY`, `RTQA_SIGNIN_IDP_AUTH_DOMAIN`, `RTQA_SIGNIN_IDP_PROJECT_ID` |
+
+The organization the appliance serves is assigned by Aitrium. It is not a setting you enter.
+
+### From your organization
+
+- **The reviewer hostname**, for example `rtqa.hospital.example`, with a DNS record pointing at the host.
+- **A TLS certificate and key** for that hostname (see [TLS for reviewers](#tls-for-reviewers)).
+- **Your outbound proxy**, if you use one: its URL, and the CA certificate if it inspects TLS.
+- **The SFTP delivery host's SSH key fingerprint** (recommended). Ask the trial's delivery provider for the `SHA256:` fingerprint so you can pin it.
+- **Encrypted volumes** for the work directory and data, mounted before you install.
+
+## 2. Prepare the host
+
+On Debian or Ubuntu:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3 python3-venv curl tar ca-certificates
+```
+
+The installer creates its own Python virtual environment, so a system Python that refuses `pip install` is fine.
+
+Install `cosign` as well if you can. With it on the `PATH`, the installer checks the release's signatures, not only its checksums. See [Supply chain](/security/rtqa-appliance/supply-chain).
+
+## 3. Put the deployment values in a file (optional)
+
+You can enter the Aitrium values in the setup wizard later. For a repeatable install, put them in a file and pass it to the installer with `--env-file`:
+
+```bash
+sudo install -d -m 0755 -o root -g root /etc/aitrium
+sudo install -m 0600 -o root -g root /dev/null /etc/aitrium/deployment.env
+sudo nano /etc/aitrium/deployment.env
+```
+
+```bash /etc/aitrium/deployment.env
+RTQA_SITE_API_URL=https://<api host from Aitrium>
+RTQA_SITE_CLIENT_ID=<client id>
+RTQA_SITE_DEPLOYMENT_ID=<deployment id>
+RTQA_SITE_APPLIANCE_ID=<appliance id>
+# Only if you use an outbound proxy:
+# RTQA_NETWORK_PROXY_URL=http://proxy.hospital.example:3128
+# RTQA_NETWORK_CA_BUNDLE_FILE=/etc/aitrium/proxy-ca.pem
+```
+
+The installer merges only the `RTQA_SITE_*` deployment values and the `RTQA_NETWORK_*` outbound settings from this file. Leave the client secret out: you enter it in step 7, and it is stored in a file only the service account can read.
+
+<Warning>
+  When you run the installer as root, the `--env-file` must exist, and the file and every folder above it must be owned by root and writable only by root. A file in a user's home folder is refused. Keep it in `/root` or `/etc/aitrium`. The same rule applies to a proxy-URL file or CA bundle the installer reads.
+</Warning>
+
+## 4. Run the preflight
+
+Download the installer, then check the machine with the same options you will install with. The preflight installs nothing.
+
+```bash
+curl -fsSL -o install.sh "https://storage.googleapis.com/rtqa-appliance-releases/latest/install.sh"
+sudo bash install.sh --preflight \
+  --work-dir /opt/aitrium/rtqa \
+  --site-hostname rtqa.hospital.example \
+  --env-file /etc/aitrium/deployment.env
+```
+
+Fix everything listed under **Blocking** before you continue. Warnings do not stop the install. See [What the preflight checks](/rtqa-appliance/requirements#what-the-preflight-checks).
+
+## 5. Run the installer
+
+```bash
+sudo bash install.sh \
+  --version <version from Aitrium> \
+  --work-dir /opt/aitrium/rtqa \
+  --site-hostname rtqa.hospital.example \
+  --tls-cert /etc/aitrium/tls/rtqa.crt \
+  --tls-key /etc/aitrium/tls/rtqa.key \
+  --env-file /etc/aitrium/deployment.env
+```
+
+The installer:
+
+1. runs the preflight again, and stops on a new install if anything blocks;
+2. creates the service account `aitrium-rtqa` (see [The service account](#the-service-account));
+3. downloads the release, checks each file against the release manifest's checksums, and installs the appliance into its own virtual environment;
+4. installs the radiotherapy analysis toolkit at the version the release pins;
+5. installs the TLS edge (Caddy) and writes its configuration;
+6. writes the configuration file `/opt/aitrium/rtqa/.env`, merges your `--env-file`, and generates the service launchers and systemd units;
+7. prints a one-time setup link (on a terminal only, never into a log).
+
+To pin the release, give `--version`. Without it, the installer installs the latest published release.
+
+### Installer options you are most likely to need
+
+| Option | What it does |
+|---|---|
+| `--version <semver\|latest>` | The appliance release (default `latest`) |
+| `--profile <review\|assisted>` | `review` (default) has no AI model. `assisted` adds the local assistant and needs a GPU. |
+| `--work-dir <path>` | The work directory (default as root: `/opt/aitrium/rtqa`) |
+| `--state-dir`, `--received-dir`, `--staging-dir <path>` | Put the review-state database, received DICOM, or staging on another volume. Outside the work directory, `/srv`, `/data`, `/mnt`, `/media`, `/var/lib`, or `/opt/aitrium`, also add `--confirm-data-dir`. |
+| `--model-dir <path>` | Where model weights go (assisted only) |
+| `--env-file <path>` | Merge deployment values from a root-owned file |
+| `--ingress <bundled\|external\|none>` | The reviewer-facing TLS edge (see [TLS for reviewers](#tls-for-reviewers)) |
+| `--site-hostname <fqdn>` | The hostname reviewers use. Required for `bundled`. |
+| `--tls-cert <path>`, `--tls-key <path>` | Your certificate and key for the built-in edge |
+| `--service-user <name>` | Another name for the service account (default `aitrium-rtqa`) |
+| `--pip-index-url <https url>` | Install Python packages from your internal mirror instead of PyPI |
+| `--manifest-url <url>` | A release manifest from an https URL or a local `file://` mirror |
+| `--preflight [--json]` | Check the machine and exit. Installs nothing. |
+| `-h`, `--help` | Show every option |
+
+Options marked "DEVELOPMENT ONLY" in `--help` (`--allow-unpinned`, `--allow-unsigned`, `--allow-insecure-http`) and `--channel dev` relax the installer's checks. Do not use them on a production appliance.
+
+<Note>
+  If you install from your own Python package mirror, give it with `--pip-index-url`. The installer ignores the host's pip configuration. Mirror URLs must be `https://` and must not contain credentials; put a mirror login in `~/.netrc` for the mirror's host. The appliance itself and its pinned dependency versions still come from the signed Aitrium release.
+</Note>
+
+## The service account
+
+Run as root on Linux, the installer creates an unprivileged system account and group, `aitrium-rtqa`. It has no login shell, and its home is the work directory. All of the appliance's services run as this account inside hardened systemd units. Root keeps the code and configuration the services run, and the account owns its data.
+
+| Path | Owner | Mode |
+|---|---|---|
+| `/opt/aitrium/rtqa` (work directory) | `root:aitrium-rtqa` | `1770` |
+| `state/`, `secrets/` | `aitrium-rtqa` | `0700` |
+| `inbox/`, `staging/`, `work/`, `models/`, `logs/` | `aitrium-rtqa` | `0750` |
+| `.env`, `setup-token` | `aitrium-rtqa` | `0600` |
+| `bin/`, `venv/`, `systemd/`, the install record | `root` | `0755` / `0644` |
+
+Nothing needs to be created in advance. Allow a system account with no login shell under your account policy.
+
+<Warning>
+  If the installer finds an **existing** install in a location the service account cannot reach, such as under `/root`, it keeps running the services as root and says so. Move the install under `/opt/aitrium/rtqa` and run the installer again. Always confirm the result in the [acceptance checklist](#acceptance-checklist).
+</Warning>
+
+What this means day to day:
+
+- Run admin commands as `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa …`. The command switches to the service account for anything that touches the appliance's data, and keeps root for service management, updates, and the assistant.
+- Do not run the lower-level `rtqa-appliance` command or the `rtqa-start-*` launchers as root. They refuse. See [Troubleshooting: root_refused](/rtqa-appliance/troubleshooting#root_refused).
+- Edit `.env` as the service account: `sudo -u aitrium-rtqa nano /opt/aitrium/rtqa/.env`. On Ubuntu, the kernel refuses even root an in-place edit of it.
+- To change a data location or the outbound proxy after setup, run the installer again with the new option. Root acts only on what the installer recorded, never on the `.env`.
+- A `--bin-dir` outside the work directory, such as `/usr/local/bin`, must already be owned by root and writable only by root, all the way from `/`. The installer verifies it and never changes its owner.
+
+Without root, the services run as the installing user. On macOS they run as the user who starts them.
+
+## TLS for reviewers
+
+Reviewers reach the appliance over HTTPS. Choose the edge at install time:
+
+| Topology | Installer options | Who owns TLS |
+|---|---|---|
+| **Built-in edge** (recommended) | `--ingress bundled --site-hostname <fqdn> --tls-cert <file> --tls-key <file>` | The appliance host, with your certificate |
+| **Your own reverse proxy** | `--ingress external --site-hostname <fqdn>` | Your proxy. Forward to `127.0.0.1:8766`, and set `RTQA_WEB_TRUSTED_PROXIES` to its address. |
+| **No edge** (workstation and test) | `--ingress none` | Nobody. The appliance answers on loopback only. |
+
+The reviewer proxy listens on `127.0.0.1:8766` by default. If your reverse proxy runs on another host, set `RTQA_WEB_LISTEN_HOST` and `RTQA_WEB_TRUSTED_PROXIES` in the wizard's **Reviewer edge** step, and allow only that proxy to reach the port.
+
+On Linux, giving `--site-hostname` selects the built-in edge. With no `--site-hostname`, the installer installs without an edge and says so.
+
+With the built-in edge:
+
+- It listens on 443 on every address, and on 80 only to redirect to HTTPS.
+- It runs as the service account, so the account must be able to read the certificate and key. The installer warns when it cannot:
+
+  ```bash
+  sudo chgrp aitrium-rtqa /etc/aitrium/tls/rtqa.key && sudo chmod 640 /etc/aitrium/tls/rtqa.key
+  ```
+
+- Without `--tls-cert` and `--tls-key`, it uses a self-signed certificate. That is fine for a test. Do not give it to reviewers.
+- Renewing the certificate is your organization's job.
+
+Behind your own reverse proxy, do not let the proxy cache the appliance's DICOM responses. See [Known limits](/security/rtqa-appliance/known-limits).
+
+## 6. Install the services and start them
+
+The installer generates systemd units but does not enable them. Install and start them:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service install
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service start
+```
+
+This starts the worker, the internal UI server, the reviewer proxy, and the TLS edge, and enables them at boot. On a host without systemd, `aitrium-rtqa start` runs them as background processes instead. See [Starting and stopping](/rtqa-appliance/operations#starting-and-stopping).
+
+## 7. First-run setup
+
+### Enter the client secret
+
+If the client secret is not configured yet, enter it now. The command prompts for any missing deployment value and stores the secret in `/opt/aitrium/rtqa/secrets/`, readable only by the service account:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa configure
+```
+
+You can instead give a secret file in the wizard's **Site identity** step.
+
+### Open the setup wizard
+
+The installer printed a one-time link. With the built-in edge it looks like `https://rtqa.hospital.example/setup?token=…`. To print it again:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa setup-url
+```
+
+Treat the link as a password until setup is finished. Without an edge, the link points at the loopback address. Reach it from a workstation with an SSH tunnel (`ssh -L 8766:127.0.0.1:8766 <you>@<appliance>`), then open the link there.
+
+The wizard has nine steps. Each one is checked by the same start-up checks the appliance runs, so nothing is marked done just because a field was filled:
+
+1. **Site identity**: the Aitrium values.
+2. **Network**: outbound proxy, hosts to reach directly, an extra CA bundle, and whether SFTP goes through the proxy.
+3. **Organization**: shows the organization Aitrium assigned. It cannot be edited here.
+4. **Reviewer sign-in**: the sign-in mode (Aitrium accounts), allowed roles, and the shared local password for setup and emergencies.
+5. **Storage**: data locations, disk watermarks, and retention.
+6. **Deliveries**: how submissions reach the appliance.
+7. **Reviewer edge**: the URL reviewers use, and trusted proxies.
+8. **Assistant**: shows "Not installed" on the review profile.
+9. **Verify and hand over**: runs every check once more and retires the setup token.
+
+Every save rewrites `.env` with a timestamped backup and shows what changed. After hand-over, restart the services once so every service reads the new configuration:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service restart
+```
+
+Setup closes for good at hand-over, or when an administrator of your organization first signs in with an Aitrium account. After that, the shared local password works only during a [break-glass window](/security/rtqa-appliance/access-management#the-shared-local-password).
+
+### Pin the SFTP host key
+
+If the delivery provider gave you the host key fingerprint, pin it before the first delivery. Add it to `.env` as the service account, then restart:
+
+```bash /opt/aitrium/rtqa/.env
+RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT=SHA256:<fingerprint from the provider>
+```
+
+For several delivery hosts, use comma-separated `host[:port]=SHA256:…` entries. Without a pin, the appliance trusts the key the host presents the first time and refuses any later change. See [Data protection: SFTP host keys](/security/rtqa-appliance/data-protection#sftp-host-keys).
+
+## Acceptance checklist
+
+The appliance is ready for reviewers when all of these are true:
+
+- [ ] The installer finished without errors.
+- [ ] `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa validate` passes.
+- [ ] `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa preflight` reports no blocking problem, and its **Service user** line says the services run as `aitrium-rtqa`, which owns the data directories.
+- [ ] `sudo systemctl show -p User aitrium-rtqa-ui.service` prints `User=aitrium-rtqa`.
+- [ ] The install record `/opt/aitrium/rtqa/install-profile.env` contains `RTQA_INSTALL_SERVICE_USER=aitrium-rtqa` and `RTQA_INSTALL_SERVICE_MIGRATION=complete`.
+- [ ] `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence doctor` passes.
+- [ ] `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa network check` reaches the Aitrium control plane through your configured route.
+- [ ] `https://<reviewer hostname>/healthz` answers `200` from a workstation, with your certificate.
+- [ ] From another machine on the network, the internal ports 8765 and 8766 are **not** reachable, including with forged identity headers. Only 443 (and 80, for the redirect) answer.
+- [ ] Review profile: `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa components --json` reports `"assistant_state": "not_installed"` and `"llm_components_present": false`.
+- [ ] The volumes that hold the work directory, data, and backups are encrypted. The appliance does not check this; confirm it separately.
+- [ ] The review-state database is on local block storage, not a network file system.
+- [ ] A test reviewer can sign in with an Aitrium account.
+- [ ] A backup is scheduled (see [Backups](/rtqa-appliance/operations#backups)).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Operations runbook" icon="wrench" href="/rtqa-appliance/operations">
+    Services, health, logs, backups, updates, and storage.
+  </Card>
+  <Card title="Troubleshooting" icon="life-buoy" href="/rtqa-appliance/troubleshooting">
+    What to do when the install or a service fails.
+  </Card>
+</CardGroup>

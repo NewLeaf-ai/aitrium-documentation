@@ -1,0 +1,95 @@
+---
+title: "RTQA appliance IT setup checklist"
+sidebarTitle: "IT setup checklist"
+description: "What your IT team needs to provide, install, and check so trial QA reviewers can use the Aitrium RTQA appliance."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Trial organization IT · Hospital IT hosting the appliance" />
+
+The Aitrium RTQA appliance is software for radiotherapy clinical-trial quality assurance (QA). It runs on a Linux server or VM that your organization provides, inside your own network. The trial's QA reviewers use it in a browser: they look at a submitted treatment plan (images, contours, dose), record findings, and sign a case report.
+
+The appliance is not a cloud service. It holds the trial's radiotherapy DICOM on your server, and it reports to Aitrium's control plane over outbound HTTPS. Nothing at Aitrium connects in to it.
+
+This page is the starting point for the IT team that installs and runs it. Work through the steps in order. Each step links to the page with the details.
+
+<Steps>
+  <Step title="Provide a host that meets the system requirements">
+    A Linux x86_64 server or VM with at least 2 vCPUs, 8 GiB of RAM, and 20 GiB free on each data volume (16 GiB of RAM and about 250 GiB of SSD recommended). Python 3.11 or newer with the `venv` module. No GPU is needed unless you add the optional assistant.
+
+    Encrypt the disks that will hold the appliance's data. The appliance does not encrypt data at rest.
+
+    - Sizing, what the preflight checks, and what blocks: [System requirements](/rtqa-appliance/requirements)
+  </Step>
+  <Step title="Open the network and firewall">
+    **Inbound:** allow only HTTPS (TCP 443) to the appliance, plus TCP 80 if you want the redirect to HTTPS. Nothing else should be reachable from the network.
+
+    **Outbound:** allow HTTPS (TCP 443) to the Aitrium control plane (the address Aitrium gives you at onboarding), and to the release hosts for install and updates. Allow the trial's SFTP delivery host (usually TCP 22). If you use a corporate proxy or a TLS-inspecting proxy, have its address and CA certificate ready.
+
+    - Every destination, port, and proxy setting: [Data flows and network](/security/rtqa-appliance/data-flows)
+  </Step>
+  <Step title="Get a TLS certificate">
+    Reviewers reach the appliance at a hostname on your network, for example `rtqa.hospital.example`. Issue a certificate for that name from your own CA. The appliance's built-in TLS edge uses it.
+
+    - Certificate options and file permissions: [Install guide: TLS](/rtqa-appliance/install#tls-for-reviewers)
+  </Step>
+  <Step title="Install the appliance">
+    Gather the values Aitrium gives you, run the preflight, then run the installer as root. It creates an unprivileged service account, `aitrium-rtqa`, and installs everything under `/opt/aitrium/rtqa`.
+
+    - Step-by-step: [Install guide](/rtqa-appliance/install)
+  </Step>
+  <Step title="Complete first-run setup">
+    The installer prints a one-time setup link. Open it in a browser to complete the setup wizard: site identity, network, reviewer sign-in, storage, deliveries, and the reviewer address.
+
+    - [Install guide: First-run setup](/rtqa-appliance/install#7-first-run-setup)
+  </Step>
+  <Step title="Run the acceptance check">
+    Before reviewers use the appliance, confirm that it validates cleanly, runs as the service account, and is not reachable on its internal ports.
+
+    - [Install guide: Acceptance checklist](/rtqa-appliance/install#acceptance-checklist)
+  </Step>
+  <Step title="Schedule backups">
+    Schedule regular backups of the review-state database to an encrypted destination. The appliance does not schedule them for you. The backup does not include the received DICOM. Decide separately how to protect those files.
+
+    - [Operations: Backups](/rtqa-appliance/operations#backups)
+  </Step>
+  <Step title="Set up monitoring and logs">
+    Point your load balancer or monitoring at `/healthz`, watch the disk watermarks, and forward the service logs to your SIEM if you want them off the box.
+
+    - [Operations: Health and status](/rtqa-appliance/operations#health-and-status) and [Logs](/rtqa-appliance/operations#logs)
+  </Step>
+</Steps>
+
+## What your organization provides
+
+The appliance is software only. Your organization provides and secures the host around it:
+
+- the server or VM, its operating-system patching and hardening, and endpoint protection under your own policy;
+- full-disk or volume encryption for every volume that holds appliance data or backups;
+- the TLS certificate and its renewal;
+- a firewall that exposes only the HTTPS port;
+- time synchronization (NTP);
+- scheduled backups to an encrypted destination;
+- log forwarding to your SIEM, if you want it.
+
+The full list is in [Security overview: What you provide](/security/rtqa-appliance/overview#what-you-provide).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Security review" icon="shield-check" href="/security/rtqa-appliance/overview">
+    Architecture, data flows, access, data protection, supply chain, and known limits, for your Information Security team.
+  </Card>
+  <Card title="Operations runbook" icon="wrench" href="/rtqa-appliance/operations">
+    Services, health, logs, backups, updates, and storage, once the appliance is running.
+  </Card>
+  <Card title="Troubleshooting" icon="life-buoy" href="/rtqa-appliance/troubleshooting">
+    Common install and run failures, and what each message means.
+  </Card>
+  <Card title="Configuration reference" icon="sliders-horizontal" href="/rtqa-appliance/configuration">
+    Every setting, its default, and what it controls.
+  </Card>
+</CardGroup>
+
+For help, contact [support@aitriumos.com](mailto:support@aitriumos.com).
