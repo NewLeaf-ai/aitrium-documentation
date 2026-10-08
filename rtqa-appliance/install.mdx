@@ -198,7 +198,7 @@ With the built-in edge:
 - Without `--tls-cert` and `--tls-key`, it uses a self-signed certificate. That is fine for a test. Do not give it to reviewers.
 - Renewing the certificate is your organization's job.
 
-Behind your own reverse proxy, do not let the proxy cache the appliance's DICOM responses. See [Known limits](/security/rtqa-appliance/known-limits).
+Serve reviewers over HTTPS, with a real certificate. The appliance tells browsers to empty their cache of the appliance on sign-out and once after an upgrade, and browsers act on that only over HTTPS. Behind your own reverse proxy, make sure it honors `Cache-Control: no-store` (standard proxies do), and purge the appliance's entries from it once after upgrading from an earlier release. See [Data protection: Caching](/security/rtqa-appliance/data-protection#caching-of-patient-data).
 
 ## 6. Install the services and start them
 
@@ -276,6 +276,7 @@ The appliance is ready for reviewers when all of these are true:
 - [ ] `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa network check` reaches the Aitrium control plane through your configured route.
 - [ ] `https://<reviewer hostname>/healthz` answers `200` from a workstation, with your certificate.
 - [ ] From another machine on the network, the internal ports 8765 and 8766 are **not** reachable, including with forged identity headers. Only 443 (and 80, for the redirect) answer.
+- [ ] Reviewers reach the appliance over `https://`, not plain `http://`.
 - [ ] Review profile: `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa components --json` reports `"assistant_state": "not_installed"` and `"llm_components_present": false`.
 - [ ] The volumes that hold the work directory, data, and backups are encrypted. The appliance does not check this; confirm it separately.
 - [ ] The review-state database is on local block storage, not a network file system.

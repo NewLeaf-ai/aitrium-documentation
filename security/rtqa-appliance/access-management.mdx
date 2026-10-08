@@ -80,15 +80,17 @@ The local account carries no Aitrium identity, so the proxy's own admin routes (
 
 `basic` (shared password only) and `both` remain for existing installs. An install with no `RTQA_SIGNIN_MODE` key is read as `basic`, so an upgrade never changes mode silently. The console recommends `jwt` to such installs.
 
-## Only the proxy can assert an identity
+## Only the proxy can reach the UI server
 
-Loopback alone is not a trust boundary: any process on the host could reach the UI server. So the UI server believes identity headers only on a request that also carries a 32-byte random secret, held in `<state dir>/proxy-token` (mode 0600, owned by the service account, created by whichever service starts first and never overwritten). The check is constant-time and answers `403 proxy_token_required` before any route runs. The proxy strips any secret or identity headers a client sends and adds its own.
+Loopback alone is not a trust boundary: any process on the host could connect to the UI server. So the UI server answers only requests that carry a 32-byte random secret, held in `<state dir>/proxy-token` (mode 0600, owned by the service account, created by whichever service starts first and never overwritten). The reviewer proxy adds it to every request it forwards, after stripping any secret or identity headers a client sent.
 
-So other local accounts cannot assert a proxy-trusted identity (an Aitrium reviewer, a collaborator, or a setup or break-glass reason) without the secret. The service account itself can read the secret and is trusted, like root.
+- A request without the secret is refused with `401 proxy_token_required` before any route runs, in every sign-in mode (`jwt`, `basic`, and `both`). If it carries identity headers, it is refused with `403`.
+- The one exception is `GET /healthz`, which answers `{"status": "ok"}` and returns no data.
+- A request with the secret and no identity headers is the local account. That is how the appliance's own local tools call the UI server. A script of yours that calls the UI server directly must send `X-RTQA-Proxy-Token` with the file's contents, so it must run as the service account or root.
 
-**Requests without identity headers.** The secret guards the identity headers, not the port. A local process that connects to the UI server (`127.0.0.1:8765`) without identity headers is treated as the local account: a reviewer in `jwt` mode with the role unset, or whatever `RTQA_SIGNIN_LOCAL_ROLE` says. Treat every local account on the host as able to act as the local account, and keep interactive logins on the host to administrators.
+So other local accounts on the host can neither assert a proxy-trusted identity (an Aitrium reviewer, a collaborator, or a setup or break-glass reason) nor act as the local account. The service account itself can read the secret and is trusted, like root. Keep interactive logins on the host to administrators.
 
-Rotate the secret with `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa proxy-token rotate`, then restart the UI server and the proxy. Between the two, signed-in requests are refused.
+Rotate the secret with `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa proxy-token rotate`, then **restart both the UI server and the proxy** (`aitrium-rtqa service restart` does both). Until both have restarted, signed-in requests are refused.
 
 ## Roles
 

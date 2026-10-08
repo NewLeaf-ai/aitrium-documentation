@@ -144,19 +144,90 @@ sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence doctor   # integrity, permis
 
 ## Restoring from a backup
 
-To restore a backup taken **on the release that is installed now**, stop the services, restore, check, and start again:
+Restore runs in a maintenance window, with every appliance service stopped. Do not edit, move, or delete database files by hand; use these commands.
 
 ```bash
-sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service stop
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa stop --all
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence snapshots    # the backups this release can restore
 sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence restore --input /backup/rtqa/rtqa-20261008.sqlite3
 sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence doctor
-sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service start
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa start --all
 ```
 
-The restore refuses to run while the UI server is running. It checks the backup's checksum and schema, keeps a safety copy of the current database, and replaces the database in one step. A backup whose schema version differs from the installed release is refused.
+`persistence snapshots` checks every file under `/opt/aitrium/rtqa/state/backups` (including the pre-upgrade snapshots) and marks the ones the installed release can restore. The backups you keep elsewhere are restored with `--input <path>`.
+
+The restore works in this order:
+
+1. **Checks the backup, without changing anything:** its checksum, its integrity, the schema the file actually holds, and its complete migration history. A backup from a **newer** release than the one installed is refused; restore it with the release that took it. The state directory must be on local storage: a network or FUSE file system is refused before anything changes.
+2. **Checks that nothing is running.** It refuses while this appliance's systemd units are active or any of its UI server, proxy, or worker processes are running, and it takes a lock every appliance process holds while it runs.
+3. **Keeps a safety copy** of the current database, whatever its schema, at `<state dir>/backups/pre-restore-<time>-<id>.sqlite3`, and prints its path.
+4. **Prepares the replacement on a staged copy** beside the live database. A backup from an **older** release is migrated forward there. If anything fails at this point, for example a full disk, the live database is unchanged.
+5. **Swaps it in.** Old database journal files are moved aside first, then the prepared copy replaces the live database in one step. A crash before the swap leaves the old database; a crash after it leaves the restored one.
+6. **Checks the result** as the services do at start-up.
+
+On an appliance with a service account, the restore runs as that account, so the restored database and the safety copy belong to it. A refused or failed restore prints `{"status": "error", "reason": "<code>", ...}`.
+
+### What a restore does and does not roll back
+
+- It restores **the review-state database only**. Received DICOM, attempt results, and logs on disk are not rolled back.
+- Review work done after the backup was taken is not in the restored database. It stays in the safety copy.
+
+### Clean up afterwards
+
+The safety copies (`<state dir>/backups/pre-restore-*`) and any old journal files the restore set aside (`<state dir>/backups/set-aside-journal-*`) **hold patient data**. Nothing removes them automatically. Once the restored appliance is verified, and you have recovered anything you needed from them, delete them by hand under your retention and disposal policy:
+
+```bash
+sudo -u aitrium-rtqa rm -r /opt/aitrium/rtqa/state/backups/set-aside-journal-<time>-<id>
+sudo -u aitrium-rtqa rm /opt/aitrium/rtqa/state/backups/pre-restore-<time>-<id>.sqlite3*
+```
+
+Keep the safety copy if you may move forward to the newer release again: only a release at least as new as the database it holds can open it.
 
 <Warning>
-  To restore after moving back to an **earlier release**, contact [Aitrium support](mailto:support@aitriumos.com) before you change anything. Do not attempt it on your own.
+  The checks prove a backup is intact and was written by a compatible release. They do not authenticate it: an altered file with a rewritten manifest would pass. Restore only backups from a location you trust. The restore's service check also cannot see a process that opens the database file by other means, such as a `sqlite3` shell.
+</Warning>
+
+### Rolling back an update
+
+There are no down-migrations. To go back from a release (N+1) to the release it was upgraded from (N):
+
+<Steps>
+  <Step title="Go back to the previous release">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa update --version <N>
+    ```
+
+    `update` stops every service and runs release N's verified installer with the recorded choices.
+
+    - **If the database schema did not change** between N and N+1, the update finishes as usual (migrate, start, check `/healthz`). The rollback is done.
+    - **If the schema changed**, release N cannot open the newer database. Its installer completes the install, leaves the services **stopped**, and prints the exact restore command with the newest snapshot that passes N's restore checks, normally the pre-upgrade snapshot taken when N+1 was installed. `update` exits with status **3**. If no snapshot passes, it prints `persistence snapshots` so you can see them and why.
+  </Step>
+  <Step title="Restore the snapshot and start">
+    Run the commands the installer printed:
+
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence restore --input <pre-upgrade snapshot>
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa start --all
+    ```
+  </Step>
+  <Step title="Confirm">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa versions
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence doctor
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa validate
+    ```
+
+    Then [clean up](#clean-up-afterwards) the safety copy and any set-aside journal once you no longer need them.
+  </Step>
+</Steps>
+
+If you change your mind at step 2, running the update to N+1 again works from that state.
+
+What a rollback across a schema change costs: review work done on N+1 after its pre-upgrade snapshot is not in the restored database (it stays in the safety copy). Received data, attempt results, and logs are not rolled back.
+
+<Warning>
+  - This procedure works only back to a release that includes it, meaning the release documented here or later. To go back to an older release, contact [Aitrium support](mailto:support@aitriumos.com) first.
+  - It has been tested with the newer release simulated by a higher database schema, but not yet across two published releases. **Rehearse it on a staging appliance** before you rely on it in production.
 </Warning>
 
 ## Updates
@@ -177,6 +248,10 @@ sudo /opt/aitrium/rtqa/bin/aitrium-rtqa update --version <version>
 4. starts the services and checks that `/healthz` answers.
 
 The restart interrupts open requests, but it does not sign reviewers out. Plan updates in a maintenance window, and test them on a staging appliance first when you can.
+
+After upgrading from a release that let browsers cache DICOM for a year, purge the appliance's entries once from any reverse proxy or shared cache in front of it. Browsers clear their own copies on the next sign-in, over HTTPS. See [Data protection: Caching](/security/rtqa-appliance/data-protection#caching-of-patient-data).
+
+To go back to the previous release, see [Rolling back an update](#rolling-back-an-update).
 
 Changing a data location or the outbound proxy is also done by running the installer again with the new option, not by editing `.env`. See [The service account](/rtqa-appliance/install#the-service-account).
 
@@ -211,7 +286,7 @@ Set `RTQA_DATA_RECLAIM_AUTOMATIC=true` (in **Settings → Configuration**, or in
 
 ### What reclaim removes, and what it never removes
 
-Reclaim removes only **received deliveries and staging copies**. It never removes the review-state database, cases, findings, reports, or audit records. It also does not remove the per-attempt QA results and logs under `work/`, browser caches, or files exported to workstations.
+Reclaim removes only **received deliveries and staging copies**. It never removes the review-state database, cases, findings, reports, or audit records. It also does not remove the per-attempt QA results and logs under `work/`, or files exported to workstations. (Browsers keep no disk copy of images.)
 
 A case history is never reclaimed, whatever its age, while any part of it is held or pinned for review, has an open review session, has an unsigned case report, has pending work, or is being imported. If the appliance cannot read what it needs to decide, it keeps the data. Every deletion is audited before and after it happens. Reclaim deletes files in the ordinary way; it is not secure erasure.
 

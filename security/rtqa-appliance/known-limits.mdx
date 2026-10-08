@@ -11,13 +11,15 @@ These are the current behaviors of the Aitrium RTQA appliance that matter most f
 
 ## 1. Workstation copies and caching
 
-- DICOM files are served with `Cache-Control: public, max-age=31536000, immutable`. Browsers keep them for up to a year, and `public` also allows a shared cache in the path, for example a site reverse proxy, to store them.
+- DICOM and every other `/api/` response are served with `Cache-Control: no-store`, so browsers and shared caches do not keep them on disk. While a review tab is open, the viewer holds the images it has read in that tab's memory. Closing or reloading the tab releases them, and so do signing out and a change of reviewer or organization (both reload every open appliance tab).
+- **Session expiry does not release them.** An expired tab keeps what it loaded in memory, hidden and inert behind the sign-in view, until the same reviewer resumes, someone else signs in, the reviewer signs out, or the tab is closed. A workstation left unlocked with an expired review tab is still a workstation holding patient data. **Apply a workstation screen-lock policy** (automatic lock after a short idle time) on every machine reviewers use, and have reviewers sign out rather than let a session expire. A browser that ignores `no-store`, a swap file, or a crash dump can still put that memory on disk.
+- **Copies cached by an earlier release.** Earlier releases served DICOM with a one-year `immutable` cache lifetime. They are retired by a new DICOM path and by `Clear-Site-Data: "cache"` on sign-out and once after the upgrade. That header works only over HTTPS and only in the browser. **A site reverse proxy or shared cache that stored DICOM under the old headers keeps those entries until they expire (up to a year): purge the appliance's entries from it after upgrading.**
 - Reviewers can download a case report as Markdown and print it. Administrators can export SQL console results as CSV.
-- Server-side retention and reclaim, signing out, and removing someone from a session do not erase copies already on a workstation or in a cache. Workstation disk encryption, browser cache policy, print handling, and managed-device controls are your organization's.
+- Server-side retention and reclaim, and removing someone from a session, do not erase reports and exports already saved on a workstation, or images held in another reviewer's tab that is still open. Workstation disk encryption, print handling, and managed-device controls are your organization's.
 
-## 2. Local access to the UI server without identity headers
+## 2. Local access to the UI server
 
-The proxy secret is a boundary for identity headers, not authentication for the UI server's port. Any local process that can reach `127.0.0.1:8765` without identity headers acts as the local account. In `jwt` mode with `RTQA_SIGNIN_LOCAL_ROLE` unset, that is a reviewer. With the role set, it is that role; set to `ADMIN`, that would include the administration pages and the SQL console. Treat every local account on the host as able to read what that account can read. Keep interactive logins on the appliance host to administrators.
+The UI server (`127.0.0.1:8765`) answers only requests carrying the proxy's secret from `<state dir>/proxy-token` (mode 0600, owned by the service account), in every sign-in mode. `GET /healthz` is the one unauthenticated route, and it returns no data. Other local accounts get `401`. But anything running as the service account or root can read the secret and call the UI server as the local account (a reviewer in `jwt` mode with `RTQA_SIGNIN_LOCAL_ROLE` unset; with the role set, that role, and `ADMIN` would include the administration pages and the SQL console) or assert any identity. Treat the service account and root as trusted, and keep interactive logins on the appliance host to administrators. The model server (`127.0.0.1:8080`, assisted profile only) still has no authentication.
 
 ## 3. Authorization boundaries
 
@@ -44,8 +46,8 @@ Patient data can be in:
 - the received zone, including the downloaded archive kept next to each delivery (`RTQA_INGEST_KEEP_ARCHIVES`, default `true`);
 - staging, including supplemental inputs such as REDCap data;
 - the attempt results and logs under `work/`;
-- `logs/`, database backups, and support exports;
-- workstation exports and browser caches.
+- `logs/`, database backups, support exports, and the restore's safety copies and set-aside journals;
+- workstation exports, and the memory of open (or expired) review tabs.
 
 The database backup command copies only the database. Encryption, backup, and retention decisions need to cover every location above.
 
@@ -75,5 +77,17 @@ Vendor to supply:
 - incident-response contacts and notification terms;
 - recovery objectives (RTO and RPO);
 - penetration-test evidence.
+
+## 10. Rollback across a schema change
+
+- There are no down-migrations. Going back to an older release after its schema moved means restoring a snapshot that release can run, normally the pre-upgrade snapshot. Review work done after that snapshot is not in the restored database. It stays in the restore's safety copy, which only a release at least as new can open.
+- The restore covers the database only. Received data, attempt results, and logs written by the newer release stay on disk.
+- The state directory must be on verified local storage. The restore refuses a network or FUSE file system (NFS, SMB, MooseFS, s3fs, and others) before changing anything.
+- The restore's safety copies (`backups/pre-restore-*`) and any journal it set aside (`backups/set-aside-journal-*`) hold patient data and are never removed automatically. Delete them by hand once the restore is verified.
+- Without systemd, `aitrium-rtqa stop` signals only this install's processes, identified by executable and work directory. PID files and the worker and model-server owner records are hints only.
+- A supplied snapshot must come from a trusted location. Its checksum and migration history show that it is intact and from a compatible release; they do not authenticate its contents (the manifest can be rewritten to match an altered file).
+- The restore's service check covers processes started through the appliance. A process that opens the database file by other means, such as a `sqlite3` shell, is not detected.
+- The procedure works only back to a release that includes it.
+- It is tested with the newer release simulated by a higher schema on the live database. It has not yet been run across two published releases. Rehearse it in staging.
 
 Contact [support@aitriumos.com](mailto:support@aitriumos.com).

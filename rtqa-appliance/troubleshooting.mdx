@@ -128,14 +128,61 @@ A reviewer sees *This case's imaging is being reclaimed under the retention poli
 
 | Message | Fix |
 |---|---|
-| `stop the UI server before restoring persistence` | Stop the services (`aitrium-rtqa service stop`), then restore. |
 | `stop the UI server before running migrations` | Stop the services, then run the migration. |
-| `backup schema … is incompatible with …` | The backup was taken on a different release. Contact [Aitrium support](mailto:support@aitriumos.com). |
+| `services_running` | An appliance service is still running. Stop them with `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa stop --all`, then restore. If the command itself cannot run, see [Stopping the appliance when its CLI is broken](#stopping-the-appliance-when-its-cli-is-broken). |
+| `persistence_locked` | Another appliance command held the database lock. Wait for it to finish, or stop it, and try again. |
+| `persistence_lock_unavailable` | The lock file cannot be used (a full disk, a permission problem, or a file system without file locks). Fix the cause the message names. Until then, commands that may write the database refuse. |
+| `snapshot_schema_newer` | The backup was taken on a newer release than the one installed. Restore it with that release. |
+| `state_dir_not_local` | The state directory is on a network or FUSE file system. Move it to local storage. Nothing was changed. |
+| `staging_failed` | Preparing the replacement failed, for example on a full disk. The live database is unchanged; the message gives the safety copy's path. |
+| `database_in_use` | Something still has the live database open. Find and stop it, then retry. |
+| `database_unreadable_read_only` | A read-only `persistence status` or `doctor` could not open the database while the lock was unavailable. Free space or restore write access, and retry. |
 | `backup checksum mismatch`, `backup manifest missing` | The backup file or its `.manifest.json` is damaged or missing. Use another backup. |
 | `Not interactive: pass --yes to update without a prompt.` | `update` needs a typed confirmation. Run it on a terminal, or add `--yes` in automation. |
 | `A service could not be stopped (above); the update was not started.` | Fix what the message above names, then run `update` again. Nothing was installed. |
+| `… is installed; the services stay stopped until the pre-upgrade snapshot is restored` (exit 3) | Expected when you roll back across a schema change. Run the restore and `start --all` commands the installer printed. See [Rolling back an update](/rtqa-appliance/operations#rolling-back-an-update). |
 | `The installer failed. Services are stopped.` | Read the installer's error. Contact [Aitrium support](mailto:support@aitriumos.com) before you change database files. |
 | `… found a review-state database … but not the installed rtqa-appliance CLI to snapshot it with` | The update could not find the installed appliance to take its safety snapshot. It stopped before changing anything. Put the appliance's virtual environment back and run it again. |
+
+### Stopping the appliance when its CLI is broken
+
+`aitrium-rtqa stop --all` stops processes through the appliance's own command-line tool, which verifies each one. If that tool cannot run (for example a broken virtual environment or a half-finished install), stop the services by hand.
+
+**With systemd** (the units are installed):
+
+```bash
+sudo systemctl stop aitrium-rtqa-proxy aitrium-rtqa-ui aitrium-rtqa-worker aitrium-llama aitrium-rtqa-ingress
+systemctl is-active aitrium-rtqa-proxy aitrium-rtqa-ui aitrium-rtqa-worker aitrium-llama aitrium-rtqa-ingress
+```
+
+Every line must read `inactive`, or `unknown` for a unit this install does not have.
+
+**Without systemd,** identify each process before you signal it. A PID file can name a process that is no longer the appliance's.
+
+1. List the candidates with their command line, working directory, and appliance directories:
+
+   ```bash
+   WORK=/opt/aitrium/rtqa   # this install's work directory
+   for pid in $(pgrep -f 'rtqa-appliance (ui serve|ui proxy|worker)|rtqa_appliance\.cli (ui serve|ui proxy|worker)|rtqa-start-(ui|proxy|worker)|llama-server'); do
+     echo "== $pid: $(sudo tr '\0' ' ' < /proc/$pid/cmdline)"
+     echo "   cwd: $(sudo readlink /proc/$pid/cwd)"
+     sudo tr '\0' '\n' < /proc/$pid/environ | grep -E '^RTQA_(WORK|STATE)_DIR=' | sed 's/^/   /'
+   done
+   ```
+
+2. Keep only this install's processes: the command is `rtqa-appliance ui serve`, `ui proxy`, or `worker` (or `python -m rtqa_appliance.cli …`), or `llama-server`, **and** its `RTQA_WORK_DIR` or `RTQA_STATE_DIR` names this install's work or state directory (compare after `readlink -f`), or, when the environment names neither, its working directory is the work directory. A `llama-server` whose `-m` model file is in this install's model directory is also this install's. Leave everything else alone.
+3. Signal each confirmed process, re-checking its command line just before, and confirm it exited:
+
+   ```bash
+   pid=<confirmed pid>
+   sudo tr '\0' ' ' < /proc/$pid/cmdline; echo      # still the same process?
+   sudo kill -TERM "$pid"
+   for i in $(seq 1 20); do sudo kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+   if sudo kill -0 "$pid" 2>/dev/null; then sudo kill -KILL "$pid"; sleep 1; fi
+   ps -p "$pid" -o pid=,stat=,args= || echo "exited"
+   ```
+
+Stop the proxy first, then the UI server, the worker, and the model server. Remove `logs/ui.pid`, `logs/proxy.pid`, `logs/worker-owner.json`, and `logs/llama-owner.json` only after every process is confirmed gone.
 
 ## Assistant (assisted profile only)
 

@@ -101,8 +101,10 @@ The preflight does not check reviewer workstations. Reviewers need:
 
 - 8 GB of RAM;
 - a current Chrome or Edge with WebGL2;
-- HTTPS access to the appliance's hostname;
+- HTTPS access to the appliance's hostname (not plain HTTP: the browser cache reset needs HTTPS);
 - HTTPS access to `identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, and `www.googleapis.com`, which the browser uses to sign in to Aitrium accounts.
+
+Apply a screen-lock policy on reviewer workstations. An expired review tab still holds the patient data it loaded in memory until the reviewer signs back in, someone else signs in, or the tab is closed.
 
 ## Next step
 

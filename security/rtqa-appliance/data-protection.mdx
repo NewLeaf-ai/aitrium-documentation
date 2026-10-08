@@ -14,7 +14,7 @@ import { Audience } from '/snippets/audience.mdx';
 | Path | Protection | Set by |
 |---|---|---|
 | Browser → edge | TLS, terminated by the built-in edge (Caddy) with your certificate. The edge sets no protocol or cipher options of its own, so Caddy's defaults apply. Plain HTTP on port 80 only redirects to https. Without a certificate, the edge uses a self-signed one: fine for testing, not for reviewers. | Your certificate, given at install |
-| Edge → proxy → UI server | Plain HTTP on the loopback interface, inside the host. The proxy → UI server hop carries the proxy secret for identity headers. The edge → proxy hop and the UI server → model server hop are not authenticated. | Loopback binds |
+| Edge → proxy → UI server | Plain HTTP on the loopback interface, inside the host. The proxy secret authenticates every request on the proxy → UI server hop (it is not encryption). The edge → proxy hop and the UI server → model server hop are not authenticated. | Loopback binds |
 | Appliance → control plane, signing keys, release manifest, model hosts, REDCap, a remote model server | For `https://` URLs, TLS with certificates verified against the bundled CA store, the system store, and any extra CA you add (`RTQA_NETWORK_CA_BUNDLE_FILE`). There is no option to turn verification off. The clients do not themselves refuse an `http://` URL: the control-plane URL, a REDCap URL, a remote model endpoint, and the update check's redirects are used as configured or supplied. Confirm each is https. | Configuration |
 | Appliance → SFTP delivery host | SSH, with the server's host key verified before any credential is sent (below) | Configuration |
 | Delivery credentials from the control plane | TLS, plus AES-GCM encryption of the credential payload in the API response | Built in |
@@ -23,6 +23,22 @@ import { Audience } from '/snippets/audience.mdx';
 The control-plane URL Aitrium issues is https. The appliance does not refuse a plain `http://` value in `RTQA_SITE_API_URL`, so confirm it.
 
 **Response headers.** The proxy sends `Strict-Transport-Security` (one year, when served over https), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, and a Content Security Policy that is **report-only by default**. Set `RTQA_WEB_CSP_MODE=enforce` to enforce it.
+
+### Caching of patient data
+
+**Nothing on disk in the browser.** Every response under `/api/` carries `Cache-Control: no-store`: DICOM, stored annotation captures, case reports, DVH, contour and worklist data, exports, the image-access signal, and live event streams. A browser does not write them to its disk cache, and a site reverse proxy or shared cache may not store them. The proxy enforces this for every route. Only the application's own script and style files (`/assets/`, no patient data) are cached long-term, and the page itself is revalidated on every load.
+
+While a review tab is open, the viewer keeps the files it has read in that tab's memory, so closing and reopening a study in the same tab downloads nothing. Reloading the page or opening a new tab downloads the study again.
+
+**One-time cache reset after the upgrade.** Earlier releases served DICOM with a one-year cache lifetime, so a browser or a site proxy may still hold images from before the upgrade. The viewer now reads DICOM from a new path, so those old copies are never requested again. The proxy also sends `Clear-Site-Data: "cache"`, which tells the browser to empty its cache for the appliance, on every sign-out and once per browser after the upgrade (a cookie, `rtqa_cache_reset`, records that it was sent). Current Chrome, Edge, Firefox, and Safari support it, **but only over HTTPS**; on a plain-`http://` appliance the browser ignores it. It reaches only that browser. A site reverse proxy or shared cache is not reached; see [Known limits](/security/rtqa-appliance/known-limits#1-workstation-copies-and-caching).
+
+**Signing out and changing users.** Signing out, or any change of the signed-in reviewer or organization, reloads the page, which discards everything the tab held in memory. Other open tabs of the appliance are told (over a browser channel that carries no patient data) and reload too.
+
+**When a session expires.** The review workspace is kept, so the reviewer loses no unsaved work, but it is hidden behind an opaque sign-in view and made non-interactive: keyboard focus and shortcuts cannot reach it. Signing in again as the **same** reviewer and organization resumes the work where it was left, and re-sends any report and canvas edits whose save failed while the session was gone. Signing in as **anyone else** reloads the page first.
+
+**Drafts stay with their author.** Every change the application sends (findings, captures, dispositions, reports, the canvas, session and setup edits) is tagged with the sign-in the page was opened under, and nothing is sent once that sign-in has ended. The appliance refuses a change tagged with a different sign-in, and the reviewer sees *This change was made under a different sign-in and was not saved*. Work drafted by one reviewer can never be saved as another.
+
+Until the same reviewer resumes, someone else signs in, the reviewer signs out, or the tab is closed, an expired tab still holds its patient data in memory. See [Known limits](/security/rtqa-appliance/known-limits#1-workstation-copies-and-caching).
 
 ### SFTP host keys
 
@@ -79,7 +95,7 @@ Run as root on Linux, the installer creates an unprivileged system user and grou
 
 One audit row per **user × case × study × session window**: when a reviewer opens a study in the viewer, the appliance records it. Repeated reads of the same study by the same reviewer within 30 minutes of their last read (`RTQA_WEB_ACCESS_AUDIT_WINDOW_S`, default 1800) extend the same row. Each row holds the user ID and the reviewer's display name and email from the sign-in, the organization, the local case ID and its case lineage ID, the StudyInstanceUID, the first and last access, and a count.
 
-The viewer sends a "study opened" signal, because the browser caches images for a year and a cached reopen never reaches a file route. A hook on the DICOM file route is the fallback. The server checks the signal: the case must be in the caller's organization, and the study must be one the server has served on that path. Rows are buffered and written every 5 seconds and on shutdown. This is a buffered audit: hits still in memory can be lost if the process crashes or the database cannot be written.
+The viewer sends a "study opened" signal, because a reopen in the same tab is served from the viewer's memory and never reaches a file route. A hook on the DICOM file route is the fallback. Images are not kept in the browser's disk cache, so a reload reads the files again and both signals record it. The server checks the signal: the case must be in the caller's organization, and the study must be one the server has served on that path. Rows are buffered and written every 5 seconds and on shutdown. This is a buffered audit: hits still in memory can be lost if the process crashes or the database cannot be written.
 
 Each new row is also logged once as a JSON line, `"message": "rtqa.audit.image_access"`, with the access ID, organization, user, display name, email, case and lineage IDs, StudyInstanceUID, first access time, and window. It carries no patient name or patient ID, but it does carry the StudyInstanceUID. If your policy treats DICOM UIDs as identifiers, handle the log stream accordingly.
 
@@ -118,7 +134,7 @@ The appliance has no built-in syslog or SIEM forwarding, and does not rotate the
 | `RTQA_DATA_RECLAIM_AUTOMATIC` | `false` | Whether the worker reclaims expired data on its own |
 | `RTQA_INGEST_MAX_EXPANDED_GB` | 20 | The largest a delivered archive may unpack to (10^9 bytes). A larger one is refused before anything is written. Further caps limit entries, path depth, and expansion ratio. |
 
-Reclaim only ever removes **received deliveries and staging copies**. It never removes the review-state database, cases, findings, reports, the received-case catalog, or audit records. It also does not remove the attempt results and logs under `work/`, the assistant's model audit trail in the database, browser caches, or files exported to workstations.
+Reclaim only ever removes **received deliveries and staging copies**. It never removes the review-state database, cases, findings, reports, the received-case catalog, or audit records. It also does not remove the attempt results and logs under `work/`, the assistant's model audit trail in the database, or files exported to workstations. (Browsers keep no disk copy of images to reclaim.)
 
 **Retention is eligibility, not a deadline.** `RTQA_DATA_RETENTION_DAYS` says when data **may** be reclaimed. Nothing is removed unless reclaim runs (by hand, or automatically if turned on) and nothing blocks it, so data can stay much longer. Reclaim deletes files in the ordinary way; it is not secure media erasure.
 

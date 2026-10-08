@@ -30,7 +30,7 @@ This page is the starting point for the IT team that installs and runs it. Work 
     - Every destination, port, and proxy setting: [Data flows and network](/security/rtqa-appliance/data-flows)
   </Step>
   <Step title="Get a TLS certificate">
-    Reviewers reach the appliance at a hostname on your network, for example `rtqa.hospital.example`. Issue a certificate for that name from your own CA. The appliance's built-in TLS edge uses it.
+    Reviewers reach the appliance at a hostname on your network, for example `rtqa.hospital.example`. Issue a certificate for that name from your own CA. The appliance's built-in TLS edge uses it. Do not run the appliance for reviewers over plain HTTP: the browser cache reset it sends after upgrades and on sign-out works only over HTTPS.
 
     - Certificate options and file permissions: [Install guide: TLS](/rtqa-appliance/install#tls-for-reviewers)
   </Step>

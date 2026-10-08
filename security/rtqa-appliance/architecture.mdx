@@ -15,7 +15,7 @@ The Aitrium RTQA appliance is a small set of processes on one Linux host. Review
 |---|---|---|---|
 | **TLS edge** (Caddy), built-in edge only | `aitrium-rtqa-ingress.service` | `:443`, and `:80` to redirect, on all addresses | Terminates TLS with your certificate and forwards to the reviewer proxy on loopback. A pinned, checksum-verified static binary. |
 | **Reviewer proxy** | `aitrium-rtqa-proxy.service` | `127.0.0.1:8766` by default | The only process users are meant to reach. Handles sign-in, scopes requests to your organization, serves the public `/status` and `/healthz`, the first-run wizard, and the admin console routes. Strips any identity headers a client sends and adds verified ones. |
-| **UI server** | `aitrium-rtqa-ui.service` | `127.0.0.1:8765`, loopback only (it refuses any other address) | The review API, the static application, the review-state database, the image-access audit, and the assistant client. |
+| **UI server** | `aitrium-rtqa-ui.service` | `127.0.0.1:8765`, loopback only (it refuses any other address) | Answers only requests from the reviewer proxy (and local tools holding the proxy's secret). The review API, the static application, the review-state database, the image-access audit, and the assistant client. |
 | **Worker** | `aitrium-rtqa-worker.service` | Nothing | Polls the control plane for work orders, fetches deliveries (SFTP or a local folder), runs the analysis toolkit, writes results, and posts status events. |
 | **Analysis toolkit** | Started by the worker or UI server as a child process | Nothing | Radiotherapy DICOM analysis: inspection and dose-volume histograms. |
 | **Model server** (assisted profile only) | `aitrium-llama.service` | `127.0.0.1:8080` | Local llama.cpp inference. Absent on a review install. |
@@ -93,7 +93,7 @@ flowchart LR
 
 ### What flows where
 
-- **Browser → edge → proxy → UI server.** All reviewer traffic. Images are streamed from the UI server to the browser, which caches them. Reviewers can download a case report as Markdown and print it, and administrators can export SQL console results as CSV. Those copies leave appliance storage and need protecting on the workstation. Anything a browser shows can also be screen-captured.
+- **Browser → edge → proxy → UI server.** All reviewer traffic. Images are streamed from the UI server to the browser and held in the viewer's memory for that page only. They are answered `Cache-Control: no-store`, so the browser and any cache in the path keep no copy on disk. Reviewers can download a case report as Markdown and print it, and administrators can export SQL console results as CSV. Those copies leave appliance storage and need protecting on the workstation. Anything a browser shows can also be screen-captured.
 - **Worker → control plane.** Polling, claiming work orders, reading the bootstrap bundle (protocol and QA rules), and posting status events, all through the outbound allow-list.
 - **Worker → SFTP delivery host.** Downloads the trial delivery for a work order. The host and credentials come from the control plane for each work order. The credentials are encrypted (AES-GCM) in the API response, on top of TLS.
 - **Worker → REDCap**, when a trial uses it. Supplemental case data, if a work order names a REDCap input. The appliance posts the REDCap token and the record locator the control plane supplied, and stores the answer locally in staging.

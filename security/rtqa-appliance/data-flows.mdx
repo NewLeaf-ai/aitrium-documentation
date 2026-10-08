@@ -24,7 +24,7 @@ Other data leaves the appliance by other paths:
 
 - the trial's **SFTP and REDCap services** (REDCap receives a record locator that the control plane supplied);
 - a **remote model server**, if one is configured, which receives assistant prompts that can contain case data;
-- **reviewer workstations**, through report downloads and printing, SQL console CSV exports, and the browser's cache of images (see [Known limits](/security/rtqa-appliance/known-limits)).
+- **reviewer workstations**, through report downloads and printing and SQL console CSV exports (see [Known limits](/security/rtqa-appliance/known-limits)). Images and other patient data are not written to the browser's disk cache: every `/api/` response is `Cache-Control: no-store`.
 
 ## Data classes
 
@@ -176,8 +176,8 @@ The assisted profile adds `github.com` (llama.cpp archive or source) and `huggin
 | UI server | `127.0.0.1:8765` | `RTQA_WEB_UPSTREAM_HOST`, `RTQA_WEB_UPSTREAM_PORT` | The proxy only. It refuses to bind anything but loopback. |
 | Model server (assisted only) | `127.0.0.1:8080` | `RTQA_LLAMA_PORT` (managed server), `RTQA_ASSISTANT_ENDPOINT` (where requests go) | The UI server only |
 
-- **Expose only the edge.** Allow inbound 443 (and 80 if you want the redirect) and nothing else. The UI server is loopback-only and believes identity headers only with the proxy's secret, but it must never be published. Your acceptance test should confirm the internal port is unreachable from the network, including with forged identity headers.
-- **The secret guards identity headers, not the port.** A local process that connects to `127.0.0.1:8765` without identity headers is treated as the local account. See [Known limits](/security/rtqa-appliance/known-limits).
+- **Expose only the edge.** Allow inbound 443 (and 80 if you want the redirect) and nothing else. The UI server is loopback-only and answers only requests carrying the proxy's secret, but it must never be published. Your acceptance test should confirm the internal port is unreachable from the network, including with forged identity headers.
+- **The UI server answers only the proxy.** On the host itself, a local process without the proxy's secret gets `401` (`403` if it sends identity headers). The one exception is `GET /healthz`, which answers `{"status": "ok"}` and nothing else. See [Access management](/security/rtqa-appliance/access-management#only-the-proxy-can-reach-the-ui-server).
 - **Binding the proxy beyond loopback** (`RTQA_WEB_LISTEN_HOST=0.0.0.0`) is possible, for example behind a reverse proxy on another host. The start-up check refuses a non-loopback listener with no sign-in at all. Behind a reverse proxy, set `RTQA_WEB_TRUSTED_PROXIES` to its address so its `X-Forwarded-For` and `X-Forwarded-Proto` headers are believed. The built-in edge sets `127.0.0.1`.
 - **The model server has no authentication of its own.** It listens on loopback, so any process on the host can reach it. Treat local accounts on the host as trusted.
 - **Unauthenticated endpoints.** `GET /healthz` (for load balancers) and `GET /status` are public. `/status` shows the version, the organization name, and status lines, never patient data. Reduce it with `RTQA_WEB_STATUS_PAGE=minimal` (running or setup required only) or `off` (404). The public surface also includes the sign-in and session endpoints, the sign-in configuration (`/api/auth-config`), the application's static files, and the Content Security Policy report endpoint.
