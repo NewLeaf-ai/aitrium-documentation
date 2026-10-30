@@ -1,0 +1,114 @@
+---
+title: "Access Management"
+description: "How reviewers sign in to the Aitrium RTQA appliance, roles and session access, the shared local password, and the limits of session revocation."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Security and compliance reviewers" />
+
+## Reviewer sign-in: Aitrium accounts
+
+New installs sign reviewers in with Aitrium accounts (`RTQA_SIGNIN_MODE=jwt`):
+
+<Steps>
+  <Step title="The reviewer signs in">
+    The reviewer signs in to their Aitrium account in the browser (Firebase Authentication).
+  </Step>
+  <Step title="The proxy exchanges the token">
+    The reviewer proxy sends the resulting ID token to Aitrium's control plane and receives a **reviewer token** (a JWT).
+  </Step>
+  <Step title="The appliance verifies it">
+    The appliance verifies the reviewer token itself: RS256 only, against the control plane's published signing keys, with the issuer, the audience (`rtqa-appliance`), and the expiry checked (60 seconds of leeway). The appliance holds no signing key.
+  </Step>
+  <Step title="The organization must match">
+    The token must belong to the organization bound to this appliance. The binding comes from the control plane's assignment first; failing that, from the last good assignment cached on the box; and only when neither exists, from a developer fallback setting. An authentic token for another organization gets `403`. Optionally, `RTQA_SIGNIN_ALLOWED_ROLES` restricts which roles may sign in.
+  </Step>
+</Steps>
+
+The session is the reviewer token in an `HttpOnly; SameSite=Strict` cookie, `Secure` by default (`RTQA_WEB_COOKIE_SECURE`). It lasts until the reviewer token expires.
+
+### Sessions are not revoked centrally
+
+Validation is stateless. Signing out clears the cookie in that browser, but the token itself stays valid until it expires, and restarting the appliance does not revoke it. Removing a user in Aitrium stops new sign-ins; a token already issued stays usable until it expires. The appliance has no per-token or per-user revocation list.
+
+To stop access quickly:
+
+- Disable the account in Aitrium. This stops new sign-ins.
+- Restrict roles with `RTQA_SIGNIN_ALLOWED_ROLES`. This takes effect after a proxy restart and applies to a role, not one user.
+- Stop the reviewer proxy. This stops all access.
+
+### Signing keys and outages
+
+A validation refreshes the cached signing keys when they are older than 300 seconds (`RTQA_SIGNIN_JWKS_REFRESH_S`) or do not include the token's key ID. If the control plane cannot be reached, keys cached in memory stay usable for up to 24 hours (`RTQA_SIGNIN_JWKS_OFFLINE_GRACE_S`). This lets already-issued, unexpired tokens keep working through a short outage. The cache is in memory, so it does not survive a restart. Token expiry is still enforced, and a new sign-in needs the control plane.
+
+### Rate limit
+
+The sign-in limiter (`RTQA_SIGNIN_RATE_LIMIT_PER_MIN`, default 10 per client address per minute; 0 turns it off) applies to sign-in and session establishment and to failed local sign-ins. It does not cover every shared-password credential presented on ordinary requests.
+
+## The shared local password
+
+A shared local username and password (`RTQA_SIGNIN_BASIC_USERNAME`, `RTQA_SIGNIN_BASIC_PASSWORD_FILE`) exist for two cases only:
+
+**Setup.** The password works only while all three hold: no setup completion is recorded in the database, no setup-complete marker exists, and the one-time setup token is still on disk. Setup closes for good when the wizard hands over, or when an administrator of your organization first signs in with an Aitrium account. It never reopens, unless the database and the marker are both rolled back by a full state restore.
+
+**Break-glass.** IT turns it on at the box, for 1 to 1440 minutes:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa signin break-glass --minutes 60
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa signin break-glass --off
+```
+
+It writes a start and an end time to the configuration file. It is valid only while the start is in the past, the end is in the future, and the window is at most 24 hours. Anything unparseable, without a time zone, future-dated, or over the cap is refused. The proxy re-reads the file every 5 seconds, so break-glass starts and ends without a restart and lapses on its own. While it is on, the console shows a red banner and `/status` shows a warning.
+
+**Break-glass sign-ins are audited:** a log line always, and a database row on a best-effort basis, coalesced per user and address. Not every shared-password request creates an audit record. See [Audit and logging](/security/rtqa-appliance/data-protection#audit-and-logging).
+
+The appliance enforces no complexity rule on the shared password. IT chooses it.
+
+### The local account's role
+
+Whoever signs in with the shared password is one local account, named by `RTQA_SIGNIN_LOCAL_DISPLAY_NAME` (default: the operating-system user), with the role `RTQA_SIGNIN_LOCAL_ROLE`. With the role unset:
+
+- In `jwt` mode it is an **administrator only when the proxy attests** that it accepted the password for setup or break-glass. That gives the UI server's administration pages: storage, the image-access audit export, the SQL console, and assistant policy. Anything else, for example a local tool, is a **reviewer**.
+- In the legacy `basic` and `both` modes it is a **reviewer**, because everyone who knows the password is this account. Setting `RTQA_SIGNIN_LOCAL_ROLE=ADMIN` there is an explicit opt-in: the UI server logs a warning at every start and a start-up check warns.
+
+An explicitly set `RTQA_SIGNIN_LOCAL_ROLE` always wins.
+
+The local account carries no Aitrium identity, so the proxy's own admin routes (recent events, sign-in, configuration, updates), which need an Aitrium administrator token, refuse it, and so does session collaboration. As an administrator it sees only review sessions it is a member of, plus the administration pages. Those include the read-only SQL console, which can read the whole review-state database.
+
+### Legacy modes
+
+`basic` (shared password only) and `both` remain for existing installs. An install with no `RTQA_SIGNIN_MODE` key is read as `basic`, so an upgrade never changes mode silently. The console recommends `jwt` to such installs.
+
+## Only the proxy can reach the UI server
+
+Loopback alone is not a trust boundary: any process on the host could connect to the UI server. So the UI server answers only requests that carry a 32-byte random secret, held in `<state dir>/proxy-token` (mode 0600, owned by the service account, created by whichever service starts first and never overwritten). The reviewer proxy adds it to every request it forwards, after stripping any secret or identity headers a client sent.
+
+- A request without the secret is refused with `401 proxy_token_required` before any route runs, in every sign-in mode (`jwt`, `basic`, and `both`). If it carries identity headers, it is refused with `403`.
+- The one exception is `GET /healthz`, which answers `{"status": "ok"}` and returns no data.
+- A request with the secret and no identity headers is the local account. That is how the appliance's own local tools call the UI server. A script of yours that calls the UI server directly must send `X-RTQA-Proxy-Token` with the file's contents, so it must run as the service account or root.
+
+So other local accounts on the host can neither assert a proxy-trusted identity (an Aitrium reviewer, a collaborator, or a setup or break-glass reason) nor act as the local account. The service account itself can read the secret and is trusted, like root. Keep interactive logins on the host to administrators.
+
+Rotate the secret with `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa proxy-token rotate`, then **restart both the UI server and the proxy** (`/opt/aitrium/rtqa/bin/aitrium-rtqa service restart` does both). Each service keeps the secret it started with, so rotation takes effect only after both restart; while they hold different secrets, signed-in requests are refused.
+
+## Roles
+
+The appliance does not define its own role catalog. Platform roles come from the Aitrium reviewer token, or, for the local account, from local configuration and the setup and break-glass rules above. The appliance acts on one platform role:
+
+| Role | What it adds |
+|---|---|
+| `ADMIN` (platform administrator) | The admin console: overview with recent events, sign-in, deliveries, storage, configuration (writable unless `RTQA_WEB_CONSOLE_WRITES=false`), updates, the image-access audit export, the read-only SQL console, and assistant policy. Being an administrator does not open a review session's content through the review screens: an administrator sees only sessions they are a member of. The SQL console is the exception: it reads the whole review-state database, including session content, and each query is audited. |
+| Any other role (for example `REVIEWER`) | The worklist, cases, and the review sessions they may see |
+
+### Session access
+
+Within a review session, access is per member, at one of three levels: **view**, **edit**, or **approve**. Restricted sessions need membership. Sessions migrated from before session access existed also let any non-administrator of the same organization view them. The session's owner and platform administrators can manage a session's access, and new grants are checked against Aitrium's directory: the colleague must be eligible for the project.
+
+The worklist and image routes are scoped to the organization, not to session membership. See [Known limits](/security/rtqa-appliance/known-limits).
+
+## Single sign-on and MFA
+
+Single sign-on through your own identity provider is **planned, not in this release**. Until then, reviewers use Aitrium accounts. MFA and password rules for Aitrium accounts are set by the account provider, not by the appliance; ask Aitrium for that policy.
+
+Accounts are created and removed by Aitrium. Your organization decides who should have access and who is an administrator.
