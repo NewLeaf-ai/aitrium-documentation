@@ -11,7 +11,7 @@ import { Audience } from '/snippets/audience.mdx';
   **This guide is for EORTC trials.** If your trial page shows a **Trial Data Submission Schedule**, follow [RTQA data submission](/aitrium-os/protocol-submissions) instead. New in 2.3? See [What's new in AitriumOS 2.3](/aitrium-os/whats-new-2-3#if-you-submit-to-eortc-trials).
 </Info>
 
-Each EORTC trial lists its **dataset types** (for example a planning dataset or a prior radiotherapy dataset). You send one dataset type for one patient at a time, from a folder that holds that patient's export.
+Each EORTC trial lists its **dataset types** (for example a planning dataset or a prior radiotherapy dataset) under **Trial Submission Events** on the trial page. Select **Instructions** on a dataset type to read the trial team's instructions for it. You send one dataset type for one patient at a time, from a folder that holds that patient's export.
 
 ## Walkthrough
 
@@ -44,7 +44,9 @@ Each EORTC trial lists its **dataset types** (for example a planning dataset or 
 
 If the patient already exists, the list shows that patient. If the ID is close to an existing one, AitriumOS shows **Similar to existing patient** so you can check it first.
 
-<img src="/images/trial_submissions/2-3/eortc-patient-list.png" alt="EORTC patient list with the Search or add ID field, status tabs, and a dataset cell that reads Sent" style={{borderRadius: "8px"}} />
+The list has one column per dataset type. Filter it with the status tabs (**All**, **Not started**, **In progress**, **Complete**), and select **Refresh** to load the latest.
+
+<img src="/images/trial_submissions/2-3/eortc-patient-list.png" alt="Submit a Patient Dataset section with status tabs, a search field, the Add patient button, and two patients: one dataset cell reads Sent, the others read Submit Dataset" style={{borderRadius: "8px"}} />
 
 ## Start a submission
 
@@ -61,13 +63,14 @@ The header shows the steps, **Analyze · Standardize · De-identify · Contribut
 
 AitriumOS compares the folder with what the dataset type requires.
 
-- **Studies** names each study by what it holds and lists **What [dataset type] requires**. One statement sums it up, for example "Everything [dataset type] requires is in this folder." or "Missing for [dataset type]: …".
+- **Studies in this folder** names each study by what it holds, for example "Radiotherapy study".
+- **What [dataset type] requires** lists each required study, the folder study matched to it, and the items it needs, marked **Required** or **Optional**. A study with everything it needs reads **Complete**. To match a different study, select **Change**.
 - A study that matches no requirement is still sent: "Not part of [dataset type]'s requirements · sent with it".
 - A registration saved in another study counts for the study it references.
 - If the folder holds more than one plan, AitriumOS asks "This folder holds N radiotherapy plans. Which one is the [dataset type]?". Choose **Use this plan** on the right one.
 - **Supporting documents** appears when the dataset type names documents. See [Supporting documents](/aitrium-os/documents-submissions#supporting-documents-in-an-imaging-submission).
 
-<img src="/images/trial_submissions/2-3/eortc-analyzer-results.png" alt="Analyzer results for an EORTC dataset type, with the Studies tab and the statement that everything the dataset type requires is in the folder" style={{borderRadius: "8px"}} />
+<img src="/images/trial_submissions/2-3/eortc-analyzer-results.png" alt="Analyzer results for an EORTC dataset type: Studies in this folder on the left, and What Prior Radiotherapy requires on the right, with each required study marked Complete" style={{borderRadius: "8px"}} />
 
 Missing items never stop you. If something is in another folder, close the submission and start again with that folder, or continue: the trial team sees what was missing.
 
@@ -77,8 +80,12 @@ Select **Standardize RT Structures** (or **Check De-Identification** if there's 
 
 This step appears when the folder has a structure set. AitriumOS suggests the trial's structure name for each of your structures.
 
-1. Check the suggestions. Change any name from the list.
-2. Select the structures to rename, then select **Apply Changes**. If you select none, the button reads **Continue with Standard Labels**.
+Structures that already use the trial's names aren't in the table. The line **Not in the table: N already standard** counts them. Select **Show** to see them.
+
+1. Check the suggestions under **Suggested Labels**. Change any name under **Updated Label**.
+2. In the **Update** column, select the structures to rename, then select **Apply Changes**. If you select none, the button reads **Continue with Standard Labels**.
+
+<img src="/images/trial_submissions/2-3/eortc-standardize.png" alt="Standardize step for a CT structure set, with one structure selected for renaming, its suggested label and confidence, and the Apply Changes button" style={{borderRadius: "8px"}} />
 
 If the folder has more than one structure set, you go through them one at a time. See [Multiple structure sets](/aitrium-os/multiple-structure-sets).
 
@@ -94,7 +101,9 @@ If the disk fills up or a step fails, AitriumOS asks what to do. See [Troublesho
 
 ### 4. Review
 
-**Confirm Data Transfer** shows the de-identified dataset: patient, dataset type, series by modality, and supplementary files. Check it, then select **Confirm and Transfer**.
+Under **Contribute**, **Confirm Data Transfer** shows the de-identified dataset: patients, DICOM series, supplementary files, the dataset type, and the modalities. One statement sums up what the dataset type requires, for example "Everything [dataset type] requires is in this folder." or "Missing for [dataset type]: …". **Patient Datasets** lists each study. Check it, then select **Confirm and Transfer**.
+
+<img src="/images/trial_submissions/2-3/eortc-confirm-transfer.png" alt="Confirm Data Transfer screen with counts of patients, DICOM series and supplementary files, the dataset type, modality chips, and the statement that everything Prior Radiotherapy requires is in this folder" style={{borderRadius: "8px"}} />
 
 ### 5. Upload to trial
 
@@ -103,11 +112,11 @@ The upload has two parts, shown on the transfer card:
 1. **Data Transfer** sends the dataset to the trial's destination.
 2. **Aitrium Sync** records the submission with Aitrium and notifies the trial team.
 
-<img src="/images/trial_submissions/2-3/upload-in-progress.png" alt="Transfer card during Data Transfer, with the header steps Analyze, Standardize, De-identify and Contribute" style={{borderRadius: "8px"}} />
+{/* screenshot pending: upload-in-progress.png */}
 
-When both finish, **Submission complete** appears. **What happens next** tells you what the trial team sees. **Instructions from [organization]** shows the trial team's instructions for this dataset type, if there are any. Follow them each time.
+When both finish, **Submission complete** appears. **Delivery** shows the **Upload** and its **Verification**. **What happens next** tells you what the trial team sees. **Instructions from [organization]** shows the trial team's instructions for this dataset type, if there are any. Follow them each time. To send the next dataset, select **Submit another patient dataset**.
 
-<img src="/images/trial_submissions/2-3/submission-complete.png" alt="Submission complete screen with Delivery, What happens next, and Instructions from the trial organization" style={{borderRadius: "8px"}} />
+<img src="/images/trial_submissions/2-3/submission-complete.png" alt="Submission complete screen with Delivery (Upload and Verification), What happens next, and Instructions from the trial organization" style={{borderRadius: "8px"}} />
 
 <Warning>
   **Keep AitriumOS open until Submission complete appears.** A progress bar at 100% isn't the end. If you close AitriumOS early, the trial team may get the files without a record of the submission.
@@ -117,7 +126,7 @@ When both finish, **Submission complete** appears. **What happens next** tells y
 
 Back on the trial page, find the patient. The dataset type's cell reads **Sent** (or **Sent · N required items missing**), and **Last Sent** shows the time.
 
-Select the cell to see "What was sent for this patient, checked against this dataset type."
+Select the cell to see "What was sent for this patient, checked against this dataset type.", with the date it was last sent and a summary such as "Everything required was included."
 
 If the cell still reads **Submit Dataset**, or the row says **Last send didn't finish.**, see [Troubleshooting](/aitrium-os/submission-troubleshooting#interrupted-sends).
 

@@ -23,13 +23,13 @@ RTQA trials come set up with study arms, regimens, a schedule, and QA checks. Yo
 
 Each patient in the **Patient Submission Queue** needs a study arm and a regimen before their submissions are scheduled.
 
-1. Select **Setup Patient** in the patient's row (or **Configure Regimens** on one of their events). **Configure Patient** opens, with a badge such as "2 of 3 required setup items complete".
-2. Set the **Randomization Date** and **Study Arm**, then select **Save & Refresh Schedule**. If the trial doesn't require the date, it's marked **(optional)**.
-3. Choose a regimen, set its start date, then select **Save 1 Regimen**. You can add more than one.
+1. Select **Setup Patient** in the patient's row (or **Configure Regimens** on one of their events). **Configure Patient** opens, with a badge such as "2 of 3 required setup items complete". The **Setup Checklist** shows which items are done.
+2. Under **Basic Information**, set the **Randomization Date** and **Study Arm**, then select **Save & Refresh Schedule**. If the trial doesn't require the date, it's marked **(optional)**.
+3. Under **Patient Regimens**, choose a regimen in **Add Regimen**, set its **Start Date**, then select **Save 1 Regimen**. You can add more than one.
 
-<img src="/images/trial_submissions/2-3/configure-patient.png" alt="Configure Patient dialog with the setup checklist badge, study arm, and a regimen with its start date" style={{borderRadius: "8px"}} />
+<img src="/images/trial_submissions/2-3/configure-patient.png" alt="Configure Patient dialog with the 2 of 3 required setup items complete badge, the Setup Checklist, a study arm managed by the trial manager, and a regimen waiting for its start date" style={{borderRadius: "8px"}} />
 
-Fields marked **Managed by trial manager** are set by the trial team. To correct a wrong regimen, use **Change**: submitted data moves to the new regimen.
+Fields marked **Managed by trial manager** are set by the trial team. To correct a wrong regimen, use **Change**. It keeps any submitted data. **Remove** is available only before data is submitted.
 
 ## Find due submissions
 
@@ -47,25 +47,40 @@ The header shows the steps, **Analyze · Standardize · De-identify · RapidQA �
 
 ### 1. Check the dataset
 
-AitriumOS compares the folder with what the event requires. Studies are named by what they contain, for example "Radiotherapy study".
+AitriumOS compares the folder with what the event requires. **Dataset Analysis** counts the patients, DICOM studies, and unreadable files in the folder. On **Patient Datasets**:
+
+- **Local Studies** names each study by what it contains, for example "Radiotherapy study", and shows the plan check, for example **Matches the protocol**.
+- **Dataset Requirements** sums it up, for example "Everything required for Treatment Dataset is here.", and shows whether each required item is **Matched**. To match a different study, select **Change**.
+
+Anything that needs attention is grouped as:
 
 - **Missing**: required items not in the folder.
 - **Needs your choice**: questions about data that is there.
-- A registration saved in another study counts for the study it references ("In another study").
+
+A registration saved in another study counts for the study it references ("In another study").
 
 While the plan and dose are checked, the button reads **Checking plan and dose…**. Then review the plan and dose rows ([Plan and dose checks](#plan-and-dose-checks)).
 
-<img src="/images/trial_submissions/2-3/rtqa-analyzer-results.png" alt="Analyzer results for an RTQA event, with the plan row reading Matches the protocol and the dose row checked" style={{borderRadius: "8px"}} />
+<img src="/images/trial_submissions/2-3/rtqa-analyzer-results.png" alt="Analyzer results for an RTQA event: Dataset Analysis counts, the Radiotherapy study with its plan reading Matches the protocol, and Dataset Requirements stating that everything required is here" style={{borderRadius: "8px"}} />
 
-Missing items never stop you. When you continue, you confirm that you'll check images for burned-in patient information and that any documents contain no patient identifiers.
+Missing items never stop you. To continue, select the button at the top, for example **Standardize RT Structures**. **Review Before Proceeding** opens, with two pages:
+
+1. **Review**: check what you're about to send.
+2. **De-identification**: select the checkbox to confirm that you'll check images for burned-in patient information and that any documents contain no patient identifiers, then select **Proceed**.
 
 ### 2. Map structures
 
 This step appears when the folder has a structure set. AitriumOS first gets name suggestions. If that takes more than a minute, select **Map structures myself** or **Try again**.
 
-On **Map Protocol Structures**, map your structures to the trial's structure names. Rows that already use the trial's name need no mapping. A required PRV without a margin, such as Brainstem_PRV, is met by your PRV with any margin, such as Brainstem_PRV03.
+On **Map Protocol Structures**, map your dataset structures to the trial's structure names. Targets and organs at risk are on separate tabs, **Targets** and **Organs At Risk**, each with a count such as **2/2**. Each tab lists required structures first, then optional ones.
 
-<img src="/images/trial_submissions/2-3/map-protocol-structures.png" alt="Map Protocol Structures screen with site structure names mapped to the trial's structure names" style={{borderRadius: "8px"}} />
+- For each **Protocol Structure**, choose your structure under **Dataset Structure**. AitriumOS suggests one where it can.
+- Rows that already use the trial's name read **Standardized** and need no mapping. Rows you map read **Mapped**. An optional structure left empty reads **Optional**.
+- A required PRV without a margin, such as Brainstem_PRV, is met by your PRV with any margin, such as Brainstem_PRV03.
+
+<img src="/images/trial_submissions/2-3/map-protocol-structures.png" alt="Map Protocol Structures screen on the Targets tab, with required and optional trial structures and their status, most reading Standardized" style={{borderRadius: "8px"}} />
+
+<img src="/images/trial_submissions/2-3/map-protocol-structures-oars.png" alt="Map Protocol Structures screen on the Organs At Risk tab, with two site structures mapped to the trial's names (Mapped) and two that already use them (Standardized)" style={{borderRadius: "8px"}} />
 
 If a required structure isn't mapped, **Required structures not mapped** lists it. Choose **Go back and map** or **Continue without mapping**. Unmapped structures are sent with your names.
 
@@ -83,13 +98,13 @@ If the disk fills up or a step fails, AitriumOS asks what to do. See [Troublesho
 
 ### 4. QA check
 
-This step appears when the trial has QA checks. **QA check** shows Aitrium's preview of the trial's checks for this patient, for example "[regimen] · 24 protocol checks", graded **Per protocol**, **Acceptable variation**, **Unacceptable**, **Not evaluated**, or **Assessed after submission**.
+This step appears when the trial has QA checks (**RapidQA** in the header). **QA check** shows Aitrium's preview of the trial's checks for this patient, for example "[regimen] · 29 protocol checks", graded **Per protocol**, **Acceptable variation**, **Unacceptable**, **Not evaluated**, or **Assessed after submission**. A bar counts the results, and **Plan prescription** compares the plan with the protocol.
 
-- Use the filters, **Show all N checks**, or **Review N deviations** to look through them.
+- Use the **Structures** list, the filters (**Search checks**, **All tiers**, **All results**, **All domains**), **Show all N checks**, or **Review N deviations** to look through them.
 - Checks the trial's QA team assesses after submission need nothing from you.
 - If the preview is loading or unavailable, you can still continue. Grades are then computed after submission.
 
-<img src="/images/trial_submissions/2-3/qa-check.png" alt="QA check card with the Structures panel, filters, and results by category" style={{borderRadius: "8px"}} />
+<img src="/images/trial_submissions/2-3/qa-check.png" alt="QA check card with the Structures list, a bar counting results by grade, the plan prescription compared with the protocol, the check filters, and checks with their result and tier" style={{borderRadius: "8px"}} />
 
 Select **Continue**. A result outside the protocol never stops you from sending.
 
@@ -104,11 +119,11 @@ The upload has two parts, shown on the transfer card:
 1. **Data Transfer** sends the dataset to the trial's destination.
 2. **Aitrium Sync** records the submission with Aitrium and notifies the trial team.
 
-<img src="/images/trial_submissions/2-3/upload-in-progress.png" alt="Transfer card during Data Transfer" style={{borderRadius: "8px"}} />
+{/* screenshot pending: upload-in-progress.png */}
 
-When both finish, **Submission complete** appears. **What happens next** tells you what the trial team sees. **Instructions from [organization]** shows the trial team's instructions, if there are any. Follow them each time.
+When both finish, **Submission complete** appears. **Delivery** shows the **Upload** and its **Verification**. **What happens next** tells you what the trial team sees. **Instructions from [organization]** shows the trial team's instructions, if there are any. Follow them each time.
 
-<img src="/images/trial_submissions/2-3/submission-complete.png" alt="Submission complete screen with Delivery, What happens next, and Instructions from the trial organization" style={{borderRadius: "8px"}} />
+<img src="/images/trial_submissions/2-3/submission-complete.png" alt="Submission complete screen with Delivery (Upload and Verification), What happens next, and Instructions from the trial organization" style={{borderRadius: "8px"}} />
 
 <Warning>
   **Keep AitriumOS open until Submission complete appears.** A progress bar at 100% isn't the end. If you close AitriumOS early, the trial team may get the files without a record of the submission.
@@ -127,13 +142,13 @@ On the analyzer, AitriumOS compares the plan with the patient's regimen. Everyth
 | **No plan check** | No protocol plan check applies to this submission. |
 | **Plan check unavailable** | The check isn't available right now. It runs again before you submit. |
 
-**When the plan is outside the protocol**, choose one:
+**When the plan is outside the protocol**, the plan row moves under **Needs your choice**, the header reads **1 choice**, and AitriumOS shows the plan next to what the protocol permits. Choose one:
 
-- **Submit this plan as planned**: use this when the plan is what the patient is being treated with. Everything uploads, QA runs, and the QA report states the difference.
-- **Switch this patient to [regimen]**: offered when another regimen of the arm lists this plan's schedule. The patient's regimen is updated and the plan is checked again.
-- **Choose a different folder**: use this if this isn't the final plan. The analysis restarts with the new folder.
+- **Submit this plan as planned** (**Submit as planned**): use this when the plan is what the patient is being treated with. Everything uploads, QA runs, and the QA report states the difference.
+- **Switch this patient to [regimen]** (**Switch**): offered for each other regimen of the arm that lists this plan's schedule. The patient's regimen is updated and the plan is checked again.
+- **Choose a different folder** (**Select folder**): use this if this isn't the final plan. The analysis restarts with the new folder.
 
-<img src="/images/trial_submissions/2-3/rtqa-plan-outside-protocol.png" alt="Plan outside the protocol, with the options Submit as planned, Switch, and Select folder" style={{borderRadius: "8px"}} />
+<img src="/images/trial_submissions/2-3/rtqa-plan-outside-protocol.png" alt="RTPLAN row marked Outside the protocol under Needs your choice, comparing the plan with the protocol, with the options Submit as planned, Switch (one for each matching regimen), and Select folder" style={{borderRadius: "8px"}} />
 
 **When there's more than one dose file**, AitriumOS picks a plan sum that covers every plan by itself. Otherwise it asks you to **Choose dose file**, with options named by plan. The dose you choose decides what QA evaluates: the whole course, or one plan. Select **Use this dose**.
 
