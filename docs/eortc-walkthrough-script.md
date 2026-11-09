@@ -8,13 +8,13 @@ Internal working file (not published: `docs/` is in `.mintignore`).
 
 **Setup (same data as the screenshot shot list, Pass 1):**
 - AitriumOS 2.3.4 on the Mac app, Demo site account, **EORTC-style sandbox trial**.
-- Synthetic patient `E2E-EORTC-010` (not yet added). Folder `E2E-EORTC-010_typeA/` with CT + RTSTRUCT + RTPLAN + RTDOSE and one de-identified PDF (`surgical-report.pdf`) for a dataset type that names a supporting document. The type has instructions text set.
+- Synthetic patient `EX-00010` (not yet added). Folder `EX-00010_typeA/` with CT + RTSTRUCT + RTPLAN + RTDOSE and one de-identified PDF (`surgical-report.pdf`) for a dataset type that names a supporting document. The type has instructions text set.
 - No real patient data, real site names, or hospital paths on screen. Close other apps and notifications.
 
 | # | Scene (approx. time) | What to do on screen | Narration / caption |
 |---|---|---|---|
 | 1 | Intro (0:00–0:15) | Trial page open, cursor still. | "This walkthrough shows how to submit one patient's dataset to an EORTC trial with AitriumOS 2.3." |
-| 2 | Add a patient (0:15–0:40) | Type `E2E-EORTC-010` in **Search or add ID** → **Add patient** → **Save**. The row appears. | "Type the Trial Patient ID exactly as the trial assigned it, then add the patient. Never use a medical record number." |
+| 2 | Add a patient (0:15–0:40) | Type `EX-00010` in **Search or add ID** → **Add patient** → **Save**. The row appears. | "Type the Trial Patient ID exactly as the trial assigned it, then add the patient. Never use a medical record number." |
 | 3 | Start the submission (0:40–1:00) | In the new row, select **Submit Dataset** under the dataset type → **Select Directory** → pick the folder. Let **Getting ready** show. | "Choose the dataset type, then the folder that holds this patient's export. AitriumOS first checks disk space and the connection." |
 | 4 | Check the dataset (1:00–1:40) | Results load on **Studies**. Hover the statement "Everything … requires is in this folder." Point at the study names and **What … requires**. | "AitriumOS compares the folder with what the dataset type requires and sums it up in one sentence. Studies are named by what they hold." |
 | 5 | Supporting documents (1:40–2:05) | Scroll to **Supporting documents** → **Choose a file** → pick the PDF → select **These documents contain no patient identifiers.** | "Choose the file for each document the trial asks for. AitriumOS sends documents exactly as they are, so remove patient information first." |
