@@ -15,7 +15,12 @@ Internal working file (not published: `docs/` is in `.mintignore`).
   - `prior_diag/`: MR plus an optional CT;
   - `surgical_report.pdf`, a one-page synthetic PDF.
 
-  Everything Prior Radiotherapy requires is present. The DICOM names Example Cancer Center as the institution and the patient as EX^0003.
+  Everything Prior Radiotherapy requires is present.
+- **Structure names in the RTSTRUCT (15 structures).** They follow a site's own German-style convention for some OARs, so the standardize step has real work to show:
+  - **Already standard (8):** Brain, GTV, CTV, PTV_XXXX, OpticChiasm_PRV, OpticNrv_PRV_L, OpticNrv_PRV_R and Body. These sit under **Not in the table: N already standard** (select **Show**).
+  - **Site names to rename (4, required):** Hirnstamm → Brainstem, Chiasma → OpticChiasm, N. opticus li → OpticNrv_L, N. opticus re → OpticNrv_R.
+  - **Extra OARs the type doesn't require (3):** Auge li → Eye_L, Auge re → Eye_R, Cochlea li → Cochlea_L.
+  - **Not dry-run yet.** Before recording, check how the analyzer treats the four renamed required structures before standardization, and that the suggestions land on these names. The DICOM names Example Cancer Center as the institution and the patient as EX^0003.
 - Before recording, type `EX-000` in **Search or add ID** so the list shows only EX- patients, not the E2E- test rows.
 - No real patient data, real site names or hospital paths on screen. Close other apps and notifications.
 - After recording, EX-0003 stays as a Sent example patient (synthetic).
@@ -28,7 +33,7 @@ Internal working file (not published: `docs/` is in `.mintignore`).
 | 4 | Check the dataset (1:00–1:40) | Results load. Point at **Studies in this folder** (CT and MR study, Radiotherapy study), then **What Prior Radiotherapy requires**: both cards read **Complete**. | "AitriumOS compares the folder with what the dataset type requires. Studies are named by what they hold, and each requirement shows whether it's complete." |
 | 5 | Supporting documents (1:40–2:05) | Scroll to **Supporting documents** ("1 document file in this folder") → **Choose a file** → `surgical_report.pdf` → select **These documents contain no patient identifiers.** | "Choose the file for each document the trial asks for. AitriumOS sends documents exactly as they are, so remove patient information first." |
 | 6 | Before you continue (2:05–2:30) | Select **Standardize RT Structures** → **Before you continue** → select the burned-in pixel acknowledgment → **Continue**. | "Missing items never stop you. Confirm that you'll check images for burned-in patient information. Nothing is sent yet." |
-| 7 | Standardize (2:30–2:55) | Show the suggestions; select the rows to rename → **Apply Changes**. | "Check the suggested structure names, select the ones to rename, and apply." |
+| 7 | Standardize (2:30–3:00) | Point at **Not in the table: 8 already standard** → **Show** (Brain, GTV, CTV, PTV_XXXX…). Then the table: **Hirnstamm** → Brainstem, **Chiasma** → OpticChiasm, **N. opticus li/re** → OpticNrv_L/R, and the extra OARs **Auge li/re**, **Cochlea li**. Check the **Suggested Labels**, select the rows to rename → **Apply Changes**. | "Names that already match the trial's are left alone. For your own names, AitriumOS suggests the trial's name. Check each suggestion, select the ones to rename, and apply." |
 | 8 | De-identify (2:55–3:10) | Let de-identification run; header shows **De-identify**. | "AitriumOS de-identifies the DICOM metadata with the trial's policy and checks the result." |
 | 9 | Review and send (3:10–3:35) | **Confirm Data Transfer**: point at the one-line summary ("…requires is in this folder.") and scroll the summary → **Confirm and Transfer**. Show **Data Transfer** then **Aitrium Sync**. | "Review what will be sent, then confirm. Keep AitriumOS open until the submission is complete." |
 | 10 | Submission complete (3:35–4:00) | **Submission complete**: point at **What happens next** and **Instructions from {organization}**. | "When Submission complete appears, the trial team can see the dataset. Follow any instructions from the trial team." |
