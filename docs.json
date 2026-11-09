@@ -44,7 +44,8 @@
             "group": "Get started",
             "icon": "square-terminal",
             "pages": [
-              "aitrium-os/overview"
+              "aitrium-os/overview",
+              "aitrium-os/whats-new-2-3"
             ]
           },
           {
@@ -52,7 +53,10 @@
             "icon": "upload",
             "pages": [
               "aitrium-os/no-protocol-submissions",
-              "aitrium-os/protocol-submissions"
+              "aitrium-os/protocol-submissions",
+              "aitrium-os/documents-submissions",
+              "aitrium-os/multiple-structure-sets",
+              "aitrium-os/submission-troubleshooting"
             ]
           },
           {

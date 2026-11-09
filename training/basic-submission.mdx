@@ -9,15 +9,16 @@ import { Audience } from '/snippets/audience.mdx';
 
 ## Who this training is for
 
-Clinical site staff — for example radiotherapy technologists, medical physicists, or trial data managers — responsible for submitting patient imaging data to a clinical trial through Aitrium.
+Clinical site staff (for example radiotherapy technologists, medical physicists, or trial data managers) who submit patient imaging data to an EORTC trial through AitriumOS.
 
 You will normally arrive at this page from a link in the Aitrium portal or AitriumOS, or from your trial coordinator, identifying it as the training for your trial. If you are unsure whether this is the right curriculum for your trial, ask your trial coordinator.
 
 ## What you will learn
 
-- How to download and set up AitriumOS, including what your IT team needs to confirm before you start
-- How the submission process protects patient privacy through validation, standardization, and de-identification
-- How to submit a patient dataset, monitor its status, and resubmit when needed
+- How to set up AitriumOS, including what your IT team needs to confirm before you start
+- How to add a patient and check a dataset against the trial's dataset type
+- How AitriumOS de-identifies DICOM metadata, and what you check yourself (images and documents)
+- How to review and submit a dataset, check that it arrived, and send a new version when needed
 - Where to get help if something goes wrong
 
 ## Curriculum
@@ -26,19 +27,29 @@ Review the following materials in order:
 
 <Steps>
   <Step title="Getting Started">
-    Read [Getting Started](/aitrium-os/overview), including the **Before You Begin** section — forward its IT requirements to your IT team if you have not already. Watch the installation and first-use videos on that page. *(~10 minutes)*
+    Read [Getting started](/aitrium-os/overview), including **Before You Begin**. Forward its IT requirements to your IT team if you haven't already. *(~10 minutes)*
   </Step>
-  <Step title="EORTC Data Submission">
-    Read [EORTC Data Submission](/aitrium-os/no-protocol-submissions) and watch the step-by-step walkthrough video at the top of the page. Pay particular attention to the de-identification review step and the **Resubmitting a Dataset** section. *(~20 minutes)*
+  <Step title="Basic Data Submission guide and walkthrough">
+    Read [EORTC data submission](/aitrium-os/no-protocol-submissions) and watch the walkthrough video at the top of the page. Pay particular attention to:
+    - [Submission steps](/aitrium-os/no-protocol-submissions#submission-steps): check, standardize, de-identify, review, and upload
+    - [Check the submission](/aitrium-os/no-protocol-submissions#check-the-submission) and [Send a new version](/aitrium-os/no-protocol-submissions#send-a-new-version)
+    - [Supporting documents](/aitrium-os/documents-submissions#supporting-documents-in-an-imaging-submission), if your dataset types include documents
+    - [Troubleshooting](/aitrium-os/submission-troubleshooting), for what AitriumOS does when something goes wrong
+
+    *(~20 minutes)*
   </Step>
 </Steps>
 
+<Tip>
+  **Used AitriumOS 2.2 before?** Read [What's new in AitriumOS 2.3: If you submit to EORTC trials](/aitrium-os/whats-new-2-3#if-you-submit-to-eortc-trials).
+</Tip>
+
 <Warning>
-  **Critical behaviors.** Keep AitriumOS open until the **Submission complete** screen appears at the end of every upload, and always confirm the dataset shows as submitted on the trial page before you finish. Closing the application too early can leave a submission unregistered — the [EORTC Data Submission](/aitrium-os/no-protocol-submissions#5-upload-to-trial) guide covers both behaviors.
+  **Critical behaviors.** Keep AitriumOS open until **Submission complete** appears at the end of every upload, and always check that the dataset reads **Sent** on the trial page before you finish. See [Upload to trial](/aitrium-os/no-protocol-submissions#5-upload-to-trial) and [Check the submission](/aitrium-os/no-protocol-submissions#check-the-submission).
 </Warning>
 
 <Info>
-  **Trial-specific instructions.** Some trials display additional instructions from the trial team in AitriumOS after you complete a submission. These supplement this training with requirements unique to your trial — review and follow them each time they appear.
+  **Trial-specific instructions.** Some trials show instructions from the trial team on **Submission complete**. They add requirements unique to your trial. Follow them each time they appear.
 </Info>
 
 ## Confirming your training
@@ -54,7 +65,7 @@ After reviewing the materials above, confirm completion in the Aitrium web porta
   </Step>
 </Steps>
 
-One confirmation covers every trial that requires this training. Your confirmation — including the training version you reviewed and the date — is recorded for the trial organization's compliance records.
+One confirmation covers every trial that requires this training. Your confirmation — including the training version you reviewed and the date — is recorded for the trial organization's training records.
 
 If the training materials are materially updated (for example, after a significant software change), you will be asked to review and confirm again before your next upload.
 

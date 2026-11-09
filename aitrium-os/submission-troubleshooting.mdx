@@ -1,0 +1,70 @@
+---
+title: "Troubleshooting submissions"
+description: "What AitriumOS does when disk space, the connection, de-identification, or a send runs into trouble, and what to send to support."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Site users (EORTC and RTQA trials)" />
+
+AitriumOS handles most problems by itself and tells you what it did. When it needs you, it asks one question. Your original files are never changed.
+
+## Getting ready
+
+Every submission starts with **Getting ready**: "Checking storage and the connection for this submission".
+
+- **Disk space.** AitriumOS makes a temporary de-identified working copy of the dataset. If the usual drive is short of space, it uses another local drive and tells you, for example "Working copy placed on D:". If space is tight, a **Before you send** note says so.
+- **Not enough disk space for this submission.** No drive has room. The dialog says how much space is needed. Free up space: AitriumOS checks again every few seconds and continues by itself. Or select **Cancel this submission**.
+- **Can't reach Aitrium.** AitriumOS can't load the trial's checks or de-identification policy. Check the connection: AitriumOS continues by itself when it's back. If this keeps happening, see [How you'll know: "Can't reach Aitrium"](/aitrium-os/overview#how-you’ll-know-“can’t-reach-aitrium”).
+
+If the disk fills while AitriumOS makes the working copy, **Not enough disk space for the working copy** offers **Free up space, then try again** or **Cancel this submission**.
+
+## De-identification
+
+**De-identification needs a choice** appears when the disk filled up during de-identification and some files were left out. Choose one:
+
+- **De-identify again**: free up space first, then run it again with every file.
+- **Send without them**: continue without the files that were left out. Your choice is recorded with the submission.
+- **Cancel this submission**: AitriumOS removes its incomplete copy and closes the submission. Nothing is sent.
+
+Either way, nothing is sent until you confirm the transfer.
+
+If de-identification fails for another reason, the screen says what happened and what to try, for example closing DICOM viewers that have the files open. Select **Retry De-identification**, or **Select New Directory** to start again with another folder.
+
+## Interrupted sends
+
+If AitriumOS closed before **Submission complete**, the trial team may have the files without a record of the submission.
+
+<Tabs>
+  <Tab title="EORTC trials">
+    The patient's row says **Last send didn't finish.** Select **Send again** to repeat the same send. The trial team sees the new send as the latest.
+
+    If the dataset cell still reads **Submit Dataset** after you saw **Submission complete**, send it again from the same row.
+  </Tab>
+  <Tab title="RTQA trials">
+    The event says "Last send didn't finish. You can send it again." Select **Submit** (or **Re-submit**) on that event. The trial team sees the new send as the latest.
+
+    If the event isn't **Completed** after you saw **Submission complete**, select **Refresh** first, then send it again if it's still not **Completed**.
+  </Tab>
+</Tabs>
+
+For documents submissions, see [If a documents send is interrupted](/aitrium-os/documents-submissions#if-a-documents-send-is-interrupted).
+
+## The upload fails
+
+- Check the connection, then try again.
+- For trials that upload over SFTP, your firewall must allow the connection to the trial's server. Open **Settings → Network → Upload destinations** and select **Check now**. See [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting).
+
+## Copy details for support
+
+When a step fails, select **Copy details for support**. It copies the error, the step, and file paths to the clipboard. Paste it into an email to [support@aitriumos.com](mailto:support@aitriumos.com) with your trial name and Trial Patient ID.
+
+<Note>
+  Check the copied text before you send it. Folder paths can contain names. Remove any patient information.
+</Note>
+
+## Related
+
+- [EORTC data submission](/aitrium-os/no-protocol-submissions)
+- [RTQA data submission](/aitrium-os/protocol-submissions)
+- [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting)

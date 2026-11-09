@@ -12,8 +12,9 @@ For installation, sign-in, and update walkthroughs with screenshots, see [Gettin
 ## System requirements
 
 - **Windows 11** (and Windows 10), **64-bit (x64)**.
-- Microsoft Edge **WebView2** runtime — included with Windows 11; otherwise provisioned automatically, per-user, during setup.
-- **Normal operation requires no local administrator rights** under either installer below.
+  - Microsoft Edge **WebView2** runtime — included with Windows 11; otherwise provisioned automatically, per-user, during setup.
+- **macOS on Apple silicon.** From 2.3, AitriumOS isn't built for Intel Macs.
+- **Normal operation requires no local administrator rights** under either Windows installer below.
 
 ## Installer options
 
@@ -21,6 +22,8 @@ For installation, sign-in, and update walkthroughs with screenshots, see [Gettin
 |---|---|---|---|
 | **MSI** (default) | Per-machine | Typically required to **install** (e.g., when deployed centrally by IT); the application still **runs** in the user's context with no elevation. | Centrally-managed / IT-deployed fleets. |
 | **NSIS** | Per-user | **None** — installs into the user's profile and runs entirely in the user's context. | Self-service install where users cannot elevate. |
+
+Install only one type per computer. The per-user (NSIS) installer detects a machine-wide (MSI) copy and asks before it installs anything; the recommended answer, **No**, quits without changes. Silent (`/S`) and updater-driven installs are never blocked; they log the warning and continue. To switch types, see [Switching Windows installer types](/aitrium-os/overview#switching-windows-installer-types).
 
 <Tip>
   To satisfy a strict "no administrator privileges" requirement for self-installation, use the per-user NSIS installer. Aitrium can also set NSIS as the default for your sites — contact [support@aitriumos.com](mailto:support@aitriumos.com).
@@ -46,4 +49,5 @@ This matters most for the SFTP transfer to the investigator. It connects directl
 - **Delivery depends on how the application was installed:**
   - **Per-user (NSIS):** the user is notified in-app when a new version is available and applies the update in their own context.
   - **Per-machine (MSI), centrally deployed:** version management is handled by your IT team through your deployment tooling.
+- **Local database.** The first launch of AitriumOS 2.3 upgrades its local database on the workstation. The upgrade is one-way, so an earlier version can't be reinstalled over it.
 - **Scope.** Updates deliver fixes, improvements, and features; they do not change the security posture described in this section.

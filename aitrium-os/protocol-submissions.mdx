@@ -1,290 +1,153 @@
 ---
-title: "RTQA Data Submission"
-description: "Step-by-step guide for submitting patient data using the RTQA submission workflow in AitriumOS, including regimen setup, the trial data submission schedule, and QA evaluation."
+title: "RTQA data submission"
+description: "How to submit patient data to an RTQA (protocol) trial with AitriumOS: set up the patient, find what's due, check the plan and dose, map structures, de-identify, review QA, and upload."
 ---
 
 import { Audience } from '/snippets/audience.mdx';
 
-<Audience who="Site users" />
-
-## Overview
+<Audience who="Site users submitting to RTQA (protocol) trials" />
 
 <Info>
-  **Submitting to an EORTC trial?** Follow [EORTC Data Submission](/aitrium-os/no-protocol-submissions) instead. This guide covers all other trials.
+  **This guide is for trials whose page shows a Trial Data Submission Schedule.** Submitting to an EORTC trial? Follow [EORTC data submission](/aitrium-os/no-protocol-submissions) instead. New in 2.3? See [What's new in AitriumOS 2.3](/aitrium-os/whats-new-2-3#if-your-trial-uses-rtqa-protocol-trials).
 </Info>
 
-RTQA trials arrive in AitriumOS pre-configured with study arms, regimens, data collection schedules, and QA policies. The submission process is guided — each patient's required data submissions are scheduled automatically based on the trial's configuration.
+RTQA trials come set up with study arms, regimens, a schedule, and QA checks. You set up each patient's regimen once, then submit each event as it falls due.
 
-This guide covers the complete workflow: configuring a patient's treatment regimen, reviewing the trial data submission schedule, and submitting data through the five-step submission flow.
+## Before you start
 
-## Step-by-Step Walkthrough
+- Confirm your trial training (see [RTQA submission training](/training/rtqa-submission)).
+- Export one patient's data for one event into its own folder: images, structure set, plan, and dose.
+- Remove patient information from any documents you plan to send, including file names. AitriumOS doesn't read or change documents.
 
-<div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
-  <iframe 
-    src="https://supercut.ai/embed/aitrium/Cqc4SUbRKvKIYYKbayulnc?embed=full"
-    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowFullScreen
-  />
-</div>
+## Set up a patient
 
-## Add Patient Regimen
+Each patient in the **Patient Submission Queue** needs a study arm and a regimen before their submissions are scheduled.
 
-Before submitting data, each patient must be configured with their treatment details. Open the **Patient Configuration** modal from the trial's patient list.
+1. Select **Setup Patient** in the patient's row (or **Configure Regimens** on one of their events). **Configure Patient** opens, with a badge such as "2 of 3 required setup items complete".
+2. Set the **Randomization Date** and **Study Arm**, then select **Save & Refresh Schedule**. If the trial doesn't require the date, it's marked **(optional)**.
+3. Choose a regimen, set its start date, then select **Save 1 Regimen**. You can add more than one.
 
-### Setup Checklist
+<img src="/images/trial_submissions/2-3/configure-patient.png" alt="Configure Patient dialog with the setup checklist badge, study arm, and a regimen with its start date" style={{borderRadius: "8px"}} />
 
-The modal presents three required fields:
+Fields marked **Managed by trial manager** are set by the trial team. To correct a wrong regimen, use **Change**: submitted data moves to the new regimen.
 
-1. **Randomization Date** — When the patient was enrolled in the trial
-2. **Study Arm** — Which treatment arm the patient is assigned to
-3. **Patient Regimens** — One or more treatment regimens with start dates
+## Find due submissions
 
-<Info>
-  Status indicators show configuration progress: green = complete, amber = required field missing, lock icon = managed by trial manager (read-only).
-</Info>
+The **Patient Submission Queue** lists site-level submissions first, then each patient's events with their due date and status (for example **Scheduled**, **Overdue**, **Pending Dates**, or **Completed**). Filter by status, and select **Refresh** to load the latest. Select **Submit** on an event to start.
 
-<div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
-  <iframe 
-    src="https://supercut.ai/embed/aitrium/ehp-ci8c9NevC6EOyx98dd?embed=full"
-    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowFullScreen
-  />
-</div>
+<img src="/images/trial_submissions/submission-queue-completed.png" alt="Patient Submission Queue with overdue, scheduled and completed events, a Refresh button, and Re-submit actions" style={{borderRadius: "8px"}} />
 
-### Adding a Regimen
+An event that asks only for documents has its own short flow. See [Documents submissions](/aitrium-os/documents-submissions).
 
-1. Select a **Study Arm** from the dropdown — this filters the available regimens
-2. Choose a regimen from the searchable dropdown, which displays:
-   - Regimen name
-   - Number of fractions
-   - Dose range (min–max Gy or single target dose)
-3. Enter a **Treatment Start Date** (required), and optionally a Treatment End Date
-4. To add multiple regimens, queue them and click **Save N Regimens** to save in batch
+## Submission steps
 
-<Note>
-  Regimens already assigned to the patient are disabled in the dropdown to prevent duplicates.
-</Note>
+Select **Select Directory** and choose the patient's folder. AitriumOS first checks disk space and the connection, and continues by itself once any problem is fixed ([Getting ready](/aitrium-os/submission-troubleshooting#getting-ready)).
 
-After saving, the system automatically schedules the patient's data submissions based on the trial's data collection events, anchored to the patient's dates (randomization, regimen start, etc.).
+The header shows the steps, **Analyze · Standardize · De-identify · RapidQA · Contribute** (RapidQA only when the trial has QA checks), and the step's state, for example **1 choice**.
 
-## Submit Scheduled Datasets
+### 1. Check the dataset
 
-The **Patient Submission Queue** in the **Trial Data Submission Schedule** displays all pending data submissions for the trial:
+AitriumOS compares the folder with what the event requires. Studies are named by what they contain, for example "Radiotherapy study".
 
-- **Site-level submissions** appear at the top of the queue
-- **Patient-level submissions** are grouped by patient below
+- **Missing**: required items not in the folder.
+- **Needs your choice**: questions about data that is there.
+- A registration saved in another study counts for the study it references ("In another study").
 
-Each row shows:
-- **Status badge** — OVERDUE, SCHEDULED, or COMPLETED
-- **Due date** — When the data is expected
-- **Event name** — The data collection event (e.g., "Baseline CT", "Fraction 1")
-- **Associated datasets** — What data types are required
+While the plan and dose are checked, the button reads **Checking plan and dose…**. Then review the plan and dose rows ([Plan and dose checks](#plan-and-dose-checks)).
 
-<img src="/images/trial_submissions/patient_schedules.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
+<img src="/images/trial_submissions/2-3/rtqa-analyzer-results.png" alt="Analyzer results for an RTQA event, with the plan row reading Matches the protocol and the dose row checked" style={{borderRadius: "8px"}} />
 
-To begin a submission, click **Submit** on the desired row in the queue. This opens the guided submission flow.
+Missing items never stop you. When you continue, you confirm that you'll check images for burned-in patient information and that any documents contain no patient identifiers.
 
-## Submission Flow
+### 2. Map structures
 
-The submission flow consists of five sequential steps. Each step must complete successfully before proceeding to the next.
+This step appears when the folder has a structure set. AitriumOS first gets name suggestions. If that takes more than a minute, select **Map structures myself** or **Try again**.
 
+On **Map Protocol Structures**, map your structures to the trial's structure names. Rows that already use the trial's name need no mapping. A required PRV without a margin, such as Brainstem_PRV, is met by your PRV with any margin, such as Brainstem_PRV03.
 
-### 1. Dataset Analysis
+<img src="/images/trial_submissions/2-3/map-protocol-structures.png" alt="Map Protocol Structures screen with site structure names mapped to the trial's structure names" style={{borderRadius: "8px"}} />
 
-Select the local directory containing the patient's DICOM data. The **Dataset Analyzer** scans the directory and produces:
+If a required structure isn't mapped, **Required structures not mapped** lists it. Choose **Go back and map** or **Continue without mapping**. Unmapped structures are sent with your names.
 
-- **DICOM file inventory** — Patient, Study, and Series structure
-- **Modality breakdown** — CT, MR, RTSTRUCT, RTPLAN, RTDOSE, and other modalities detected
-- **Protocol validation** — Checks data against the trial's specific requirements
-- **Missing data warnings** — Color-coded indicators for gaps:
-  - Red: required data missing
-  - Amber: optional data missing
+If the folder has more than one structure set, see [Multiple structure sets](/aitrium-os/multiple-structure-sets).
 
-Review the analysis results and address any data gaps before proceeding.
+### 3. De-identify
 
-<img src="/images/trial_submissions/dataset_analyzer_results.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
+AitriumOS de-identifies the DICOM metadata with the trial's de-identification policy, then checks the result. This runs by itself.
 
-### 2. RT Structure Standardization
+<Danger>
+  AitriumOS de-identifies DICOM metadata only. It doesn't remove patient information burned into image pixels, and it doesn't read or change documents. Check both before you send.
+</Danger>
 
-<Note>
-  This step runs automatically when RTSTRUCT files are present in the dataset. If no RT structures exist, this step is skipped.
-</Note>
+If the disk fills up or a step fails, AitriumOS asks what to do. See [Troubleshooting](/aitrium-os/submission-troubleshooting#de-identification).
 
-The standardizer maps your local structure names to TG-263 standard nomenclature and the trial's specific structure requirements.
+### 4. QA check
 
-Review the mapping table:
-- **Left column** — Your original structure names
-- **Right column** — Standardized / trial-required names (editable via searchable dropdown)
+This step appears when the trial has QA checks. **QA check** shows Aitrium's preview of the trial's checks for this patient, for example "[regimen] · 24 protocol checks", graded **Per protocol**, **Acceptable variation**, **Unacceptable**, **Not evaluated**, or **Assessed after submission**.
 
-Protocol-required structures are highlighted to ensure all necessary mappings are confirmed before proceeding.
+- Use the filters, **Show all N checks**, or **Review N deviations** to look through them.
+- Checks the trial's QA team assesses after submission need nothing from you.
+- If the preview is loading or unavailable, you can still continue. Grades are then computed after submission.
 
-<img src="/images/trial_submissions/map_target_structures.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
-<img src="/images/trial_submissions/map_oar_structures.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
+<img src="/images/trial_submissions/2-3/qa-check.png" alt="QA check card with the Structures panel, filters, and results by category" style={{borderRadius: "8px"}} />
 
-### 3. DICOM Metadata De-identification
+Select **Continue**. A result outside the protocol never stops you from sending.
 
-This step protects patient privacy by removing or replacing personally identifiable information (PII) from DICOM metadata according to the trial's assigned de-identification policy.
+If **QA checks didn't load** appears, check the connection, then select **Retry**.
 
-The process has three sub-phases:
+### 5. Data transfer
 
-1. **Pre-anonymization validation** — Checks whether the data already meets the trial's de-identification policy requirements
-2. **De-identification** — Removes or replaces PII fields (patient name, patient ID, dates, and other identifying metadata) per the trial's policy. A progress bar tracks the operation.
-3. **Post-anonymization validation** — Confirms the anonymized files meet all policy requirements before proceeding
+**Confirm Data Transfer** shows the de-identified dataset: patient, event, and series by modality. If QA found results outside the protocol, it says so: "They appear in the QA report after you send." Check it, then select **Confirm and Transfer**.
+
+The upload has two parts, shown on the transfer card:
+
+1. **Data Transfer** sends the dataset to the trial's destination.
+2. **Aitrium Sync** records the submission with Aitrium and notifies the trial team.
+
+<img src="/images/trial_submissions/2-3/upload-in-progress.png" alt="Transfer card during Data Transfer" style={{borderRadius: "8px"}} />
+
+When both finish, **Submission complete** appears. **What happens next** tells you what the trial team sees. **Instructions from [organization]** shows the trial team's instructions, if there are any. Follow them each time.
+
+<img src="/images/trial_submissions/2-3/submission-complete.png" alt="Submission complete screen with Delivery, What happens next, and Instructions from the trial organization" style={{borderRadius: "8px"}} />
 
 <Warning>
-  If errors occur during de-identification (e.g., corrupt files, insufficient disk space), the system provides specific guidance and a retry option. You can also select a new source directory to start over.
+  **Keep AitriumOS open until Submission complete appears.** A progress bar at 100% isn't the end. If you close AitriumOS early, the trial team may get the files without a record of the submission.
 </Warning>
 
-### 4. QA Policy Evaluation
+## Plan and dose checks
 
-<Note>
-  This step only appears if the protocol has a QA policy assigned. If no QA policy is configured, the flow proceeds directly to Data Transfer.
-</Note>
+On the analyzer, AitriumOS compares the plan with the patient's regimen. Everything in the folder uploads whatever the result. Your choices are recorded with the submission.
 
-QA policy evaluation assesses the dosimetric and structural quality of the submitted dataset:
+| Plan status | What it means |
+|---|---|
+| **Matches the protocol** | The plan's dose and fractions match the regimen. |
+| **Outside the protocol** | The plan differs from the regimen. AitriumOS asks one question (below). |
+| **Not a listed schedule** | The plan is within the protocol range but isn't one of its listed schedules. Nothing to do. |
+| **Review required** or **Checked after submission** | A course of more than one plan. The trial's QA team confirms it after submission. You don't need to do anything. |
+| **No plan check** | No protocol plan check applies to this submission. |
+| **Plan check unavailable** | The check isn't available right now. It runs again before you submit. |
 
-1. **Extract QA Facts** — The system identifies the best RT study pair (RTSTRUCT + RTDOSE), computes DVH metrics, and evaluates them against the protocol's policy constraints. A progress bar is shown with status updates.
+**When the plan is outside the protocol**, choose one:
 
-2. **Review QA Metrics** — A table displays the extracted metrics (e.g., D95, D5, Dmean, Dmax, Dmin, V100%) with color-coded results:
-   - **Green** — Within acceptable range (Per Protocol)
-   - **Amber** — Acceptable variation
-   - **Red** — Unacceptable deviation
+- **Submit this plan as planned**: use this when the plan is what the patient is being treated with. Everything uploads, QA runs, and the QA report states the difference.
+- **Switch this patient to [regimen]**: offered when another regimen of the arm lists this plan's schedule. The patient's regimen is updated and the plan is checked again.
+- **Choose a different folder**: use this if this isn't the final plan. The analysis restarts with the new folder.
 
-3. Click **Continue**
+<img src="/images/trial_submissions/2-3/rtqa-plan-outside-protocol.png" alt="Plan outside the protocol, with the options Submit as planned, Switch, and Select folder" style={{borderRadius: "8px"}} />
 
-<img src="/images/trial_submissions/qa_metrics_review.png" alt="Trial patient submission schedules" style={{borderRadius: '8px'}} />
+**When there's more than one dose file**, AitriumOS asks you to **Choose dose file**. The options are named by plan. The dose you choose decides what QA evaluates: the whole course, or one plan. Select **Use this dose**.
 
+**When the dose isn't the plan's full dose**, choose **Choose a new export** or **Submit without dose checks**. Without dose checks, those checks read **Not evaluated**.
 
-### 5. Data Transfer
+## Check the submission
 
-The final step uploads the processed dataset to the trial's configured destination.
+In the **Patient Submission Queue**, the event should read **Completed**. If it doesn't, or the row says "Last send didn't finish. You can send it again.", see [Troubleshooting](/aitrium-os/submission-troubleshooting#interrupted-sends).
 
-1. **Pre-submission review** — Verify the summary of what will be submitted:
-   - Patient ID and Site ID
-   - Number of DICOM series grouped by modality
-   - Integration destination
-   - Anonymization status confirmation
-   - QA status confirmation (if applicable)
+## Re-submit
 
-2. **Upload** — The upload runs in two parts, shown on the transfer progress card: **Data Transfer** uploads the files to the trial's configured destination with real-time progress tracking, then **Aitrium Sync** registers the submission with Aitrium — recording it for the trial and notifying the trial team
+To correct or complete a submission, select **Re-submit** on the completed event and go through the same steps. The trial team sees the new send as the latest. The earlier send stays on record.
 
-3. **Success** — The **Submission complete** screen displays transfer details and provides the option to submit another patient dataset
+## Need help?
 
-<img src="/images/trial_submissions/upload-in-progress.png" alt="Upload progress bar mid-transfer in AitriumOS" style={{borderRadius: "8px"}} />
-
-*While the upload is in progress, keep AitriumOS open.*
-
-<img src="/images/trial_submissions/upload-complete-confirmation.png" alt="Submission complete screen shown after the submission finishes" style={{borderRadius: "8px"}} />
-
-*The Submission complete screen. A progress bar at 100% is not this screen — the submission is still finishing.*
-
-<Warning>
-  **Keep AitriumOS open until the Submission complete screen appears, then verify the submission.** Closing the application while the upload is finishing can leave a submission unregistered — the trial team receives the files but gets no notification, and the event will not move to **Completed**. After every upload, confirm the event shows **Completed** in the Patient Submission Queue (see [Monitoring Submission Status](#monitoring-submission-status)). If it doesn't, see [Troubleshooting](#troubleshooting-common-issues).
-</Warning>
-
-## Monitoring Submission Status
-
-Verifying the submission is the final step of every upload — don't skip it:
-
-1. Navigate to the trial in AitriumOS
-2. Find the patient's event in the **Patient Submission Queue** and confirm its status shows **Completed**
-
-<img src="/images/trial_submissions/submission-queue-completed.png" alt="Patient Submission Queue showing the just-submitted event as Completed" style={{borderRadius: "8px"}} />
-
-If the event has not moved to **Completed** after you saw the **Submission complete** screen, the submission did not finish registering — see [Troubleshooting](#troubleshooting-common-issues).
-
-The queue provides real-time status per patient and event.
-
-Submission statuses progress through:
-- **Pending Dates** — Waiting for anchor dates (e.g., randomization date not yet set)
-- **Scheduled** — Dates calculated, awaiting data submission
-- **In Progress** — Submission started
-- **Completed** — Data successfully submitted
-- **Overdue** — Past the collection window end date
-
-## Resubmitting a Dataset
-
-A submission may need to be repeated — for example, when a dataset was incomplete, an upload failed partway through, or the trial team requests a corrected dataset.
-
-1. Navigate to the trial in AitriumOS and locate the patient's event in the **Patient Submission Queue**.
-2. The submission's action button reflects what is needed:
-   - **Complete Required Items** — the dataset is missing required items; provide them to finish the original submission.
-   - **Re-submit** — the dataset should be submitted again; selecting it restarts the submission flow for that event.
-3. Prepare the corrected dataset and proceed through the same analysis, standardization, de-identification, QA evaluation, and transfer steps as the original submission.
-
-A resubmission will transfer a new dataset to the recipient for that patient event; earlier submissions remain recorded for traceability.
-
-## Best Practices
-
-<AccordionGroup>
-  <Accordion title="Prepare Your Data">
-    - Ensure all trial-required DICOM data is available in a single directory for submission
-    - Verify that supplementary non-DICOM files have been pseudonymized
-    - Confirm that DICOM images do not contain burned-in pixels with personally identifiable information
-  </Accordion>
-
-  <Accordion title="Configure Patients Early">
-    - Set randomization dates and regimen start dates promptly after enrollment
-    - This ensures scheduled submissions are generated with correct due dates
-    - Review the Patient Submission Queue to confirm expected events appear
-  </Accordion>
-
-  <Accordion title="Review QA Results Carefully">
-    - Address any unacceptable deviations (red indicators) before acknowledging
-    - Contact the trial coordinator if you are unsure whether a variation is acceptable
-    - Use manual entry to supplement metrics the system could not extract automatically
-  </Accordion>
-</AccordionGroup>
-
-## Troubleshooting Common Issues
-
-### Dataset Analysis Failures
-If dataset analysis fails:
-- Check the Data Errors tab for details — the DICOM data may be corrupted
-- Verify all trial-required DICOM data and series are present in the selected directory
-- Ensure the directory is accessible and not locked by another application
-
-### RT Structure Standardization Issues
-For RT structure mapping problems:
-- Confirm RTSTRUCT files are properly linked to their image series
-- Check that structure names can be mapped to the trial's required nomenclature
-- Use the searchable dropdown to manually assign mappings for unrecognized names
-
-### De-identification Errors
-If de-identification fails:
-- Check available disk space — the process creates anonymized copies of all files
-- Verify file permissions on the source directory
-- Use the **Retry** button to attempt again, or **Select New Directory** to start over
-
-### QA Metric Extraction Issues
-If QA facts cannot be extracted:
-- Verify that both RTSTRUCT and RTDOSE files are present and properly linked
-- Check that structure names have been correctly standardized in the previous step
-- Use manual entry to provide metrics that could not be computed automatically
-
-### Upload Errors
-If data transfer fails:
-- Verify your internet connection stability
-- Confirm your institution's firewall permits the outbound transfer connection — see [Before You Begin](/aitrium-os/overview#before-you-begin)
-- Check that the trial's integration is properly configured (contact your trial administrator)
-- Ensure you have proper trial upload permissions
-- Contact support if issues persist
-
-### Upload finished but the event doesn't show as Completed
-
-If the upload completed but the patient's event still has not moved to **Completed** in the Patient Submission Queue, the application was most likely closed before the submission finished registering. The trial team received the files, but no notification was sent and the submission was not recorded.
-
-To resolve:
-- Run the submission again for that event from the **Patient Submission Queue**, exactly as you did the first time. The trial team can disregard the duplicate file.
-- If the event still does not show as **Completed**, contact [support@aitriumos.com](mailto:support@aitriumos.com) with your trial ID and patient ID.
-
-Verifying every submission in the queue right after uploading (see [Monitoring Submission Status](#monitoring-submission-status)) catches this immediately instead of weeks later.
-
-## Need Help?
-
-If you encounter any issues during the submission process:
-- Review the error messages carefully for specific guidance
-- Consult the trial-specific requirements documentation
-- Contact support at [support@aitriumos.com](mailto:support@aitriumos.com)
+- [Troubleshooting](/aitrium-os/submission-troubleshooting): disk space, connection, interrupted sends, and what to send to support.
+- Contact [support@aitriumos.com](mailto:support@aitriumos.com) with your trial name and Trial Patient ID.

@@ -1,24 +1,24 @@
 ---
-title: "EORTC Data Submission"
-description: "Step-by-step guide for submitting clinical trial data using the EORTC submission workflow in AitriumOS."
+title: "EORTC data submission"
+description: "How to submit a patient dataset to an EORTC trial with AitriumOS: add the patient, check the dataset, de-identify, review, and upload."
 ---
 
 import { Audience } from '/snippets/audience.mdx';
 
-<Audience who="Site users" />
-
-## Overview
+<Audience who="Site users submitting to EORTC trials" />
 
 <Info>
-  **This guide is for EORTC trials.** For all other trials, follow [RTQA Data Submission](/aitrium-os/protocol-submissions) instead.
+  **This guide is for EORTC trials.** If your trial page shows a **Trial Data Submission Schedule**, follow [RTQA data submission](/aitrium-os/protocol-submissions) instead. New in 2.3? See [What's new in AitriumOS 2.3](/aitrium-os/whats-new-2-3#if-you-submit-to-eortc-trials).
 </Info>
 
-This guide walks through submitting clinical trial data with AitriumOS for EORTC trials, which use a per-patient dataset checklist. The submission process ensures your data meets all trial requirements while maintaining patient privacy through standardization and de-identification.
+Each EORTC trial lists its **dataset types** (for example a planning dataset or a prior radiotherapy dataset). You send one dataset type for one patient at a time, from a folder that holds that patient's export.
 
-## Step-by-Step Walkthrough
+## Walkthrough
+
+{/* EORTC WALKTHROUGH PLACEHOLDER: replace this embed with the 2.3.4 re-recording (script: docs/eortc-walkthrough-script.md) once it exists. Until then, today's walkthrough stays so nothing breaks. */}
 
 <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
-  <iframe 
+  <iframe
     src="https://supercut.video/embed/aitrium/K8ppUTUdCx8K6rN6sc62GN?embed=full"
     style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -26,150 +26,113 @@ This guide walks through submitting clinical trial data with AitriumOS for EORTC
   />
 </div>
 
-## Adding a Patient
+## Before you start
 
-Before you can submit data for a patient, the patient must be added to the trial:
+- Confirm your trial training (see [EORTC submission training](/training/basic-submission)).
+- Export one patient's data for one dataset type into its own folder.
+- Remove patient information from any documents you plan to send, including file names. AitriumOS doesn't read or change documents.
 
-1. Open the trial in AitriumOS and select **Add Patient**.
-2. Enter the patient's **Trial Patient ID** exactly as assigned by the trial.
-3. The patient appears in the **Submit a Patient Dataset** table, ready for submission.
+## Add a patient
+
+1. Open the trial in AitriumOS. Patients are listed under **Submit a Patient Dataset**.
+2. Type the patient's **Trial Patient ID** in **Search or add ID**, then select **Add patient**.
+3. Check the ID in the dialog and select **Save**.
 
 <Warning>
-  The Trial Patient ID is the de-identified ID the trial team uses to track this patient — double-check it before saving. Never enter a medical record number or other identifying value.
+  Enter the Trial Patient ID exactly as the trial assigned it. Never enter a medical record number or other identifying value.
 </Warning>
 
-## Submission Process
+If the patient already exists, the list shows that patient. If the ID is close to an existing one, AitriumOS shows **Similar to existing patient** so you can check it first.
 
-The clinical trial data submission protocol consists of five key steps:
+<img src="/images/trial_submissions/2-3/eortc-patient-list.png" alt="EORTC patient list with the Search or add ID field, status tabs, and a dataset cell that reads Sent" style={{borderRadius: "8px"}} />
 
-### 1. Trial Dataset Validation
+## Start a submission
 
-The first step validates your patient dataset against a clinical trial's specific dataset file requirements:
-- Verifies presence of required patient data files
-- Identifies missing or invalid data elements
-- Validates DICOM headers against a trial's requirements
-- Provides detailed feedback for any validation issues
+1. In the patient's row, select **Submit Dataset** under the dataset type you're sending.
+2. Select **Select Directory** and choose the patient's folder.
 
-### 2. Structure Standardization
+AitriumOS first checks disk space and the connection, and continues by itself once any problem is fixed ([Getting ready](/aitrium-os/submission-troubleshooting#getting-ready)). A dataset type that holds only documents has its own short flow: see [Documents submissions](/aitrium-os/documents-submissions).
 
-For trials requiring RT Structure Set file submission, this step:
-- Labels organ and target volumes according to the trial specific nomenclature
-- Maps local naming conventions to the trial specific nomenclature
-- Ensures adherence to trial-specific structure requirements
+## Submission steps
 
-### 3. DICOM Metadata Validation & De-identification
+The header shows the steps, **Analyze · Standardize · De-identify · Contribute**, and the step's state, for example **1 choice**.
 
-This critical step protects patient privacy by:
-- Analyzing all DICOM headers for potentially identifying information.
-- Applying the clinical trial's de-identification policy to the DICOM file metadata.
+### 1. Check the dataset
 
-This step will run automatically and only require action if there is a failure.
+AitriumOS compares the folder with what the dataset type requires.
+
+- **Studies** names each study by what it holds and lists **What [dataset type] requires**. One statement sums it up, for example "Everything [dataset type] requires is in this folder." or "Missing for [dataset type]: …".
+- A study that matches no requirement is still sent: "Not part of [dataset type]'s requirements · sent with it".
+- A registration saved in another study counts for the study it references.
+- If the folder holds more than one plan, AitriumOS asks "This folder holds N radiotherapy plans. Which one is the [dataset type]?". Choose **Use this plan** on the right one.
+- **Supporting documents** appears when the dataset type names documents. See [Supporting documents](/aitrium-os/documents-submissions#supporting-documents-in-an-imaging-submission).
+
+<img src="/images/trial_submissions/2-3/eortc-analyzer-results.png" alt="Analyzer results for an EORTC dataset type, with the Studies tab and the statement that everything the dataset type requires is in the folder" style={{borderRadius: "8px"}} />
+
+Missing items never stop you. If something is in another folder, close the submission and start again with that folder, or continue: the trial team sees what was missing.
+
+Select **Standardize RT Structures** (or **Check De-Identification** if there's no structure set). In **Before you continue**, confirm that you'll check images for burned-in patient information and that any documents contain no patient identifiers. The button says what happens, for example **Continue without the missing items**. Nothing is sent until you confirm the transfer.
+
+### 2. Standardize structure names
+
+This step appears when the folder has a structure set. AitriumOS suggests the trial's structure name for each of your structures.
+
+1. Check the suggestions. Change any name from the list.
+2. Select the structures to rename, then select **Apply Changes**. If you select none, the button reads **Continue with Standard Labels**.
+
+If the folder has more than one structure set, you go through them one at a time. See [Multiple structure sets](/aitrium-os/multiple-structure-sets).
+
+### 3. De-identify
+
+AitriumOS de-identifies the DICOM metadata with the trial's de-identification policy, then checks the result. This runs by itself.
 
 <Danger>
-  **Aitrium currently does not remove burned-in pixels from DICOM image data or de-identify non-DICOM files. Please ensure images and other supplementary files are anonymized prior to submission.**
+  AitriumOS de-identifies DICOM metadata only. It doesn't remove patient information burned into image pixels, and it doesn't read or change documents. Check both before you send.
 </Danger>
 
-### 4. Final Review
+If the disk fills up or a step fails, AitriumOS asks what to do. See [Troubleshooting](/aitrium-os/submission-troubleshooting#de-identification).
 
-Before submission, the user can:
-- Review dataset completeness.
-- Approve data for submission.
+### 4. Review
 
-### 5. Upload to Trial
+**Confirm Data Transfer** shows the de-identified dataset: patient, dataset type, series by modality, and supplementary files. Check it, then select **Confirm and Transfer**.
 
-The final step packages the approved dataset as a zip file named according to the clinical trial requirements, then completes the submission in two parts:
+### 5. Upload to trial
 
-1. **Data Transfer** — the dataset is uploaded to the trial's data destination, with a progress bar tracking the transfer.
-2. **Aitrium Sync** — the submission is registered with Aitrium, which records it for the trial and notifies the trial team.
+The upload has two parts, shown on the transfer card:
 
-Both parts run automatically, and the transfer progress card shows which one is underway. When both finish, AitriumOS shows the **Submission complete** screen.
+1. **Data Transfer** sends the dataset to the trial's destination.
+2. **Aitrium Sync** records the submission with Aitrium and notifies the trial team.
 
-<img src="/images/trial_submissions/upload-in-progress.png" alt="Upload progress bar mid-transfer in AitriumOS" style={{borderRadius: "8px"}} />
+<img src="/images/trial_submissions/2-3/upload-in-progress.png" alt="Transfer card during Data Transfer, with the header steps Analyze, Standardize, De-identify and Contribute" style={{borderRadius: "8px"}} />
 
-*While the upload is in progress, keep AitriumOS open.*
+When both finish, **Submission complete** appears. **What happens next** tells you what the trial team sees. **Instructions from [organization]** shows the trial team's instructions for this dataset type, if there are any. Follow them each time.
 
-<img src="/images/trial_submissions/upload-complete-confirmation.png" alt="Submission complete screen shown after the submission finishes" style={{borderRadius: "8px"}} />
-
-*The Submission complete screen. A progress bar at 100% is not this screen — the submission is still finishing.*
+<img src="/images/trial_submissions/2-3/submission-complete.png" alt="Submission complete screen with Delivery, What happens next, and Instructions from the trial organization" style={{borderRadius: "8px"}} />
 
 <Warning>
-  **Keep AitriumOS open until the Submission complete screen appears, then verify the submission.** Closing the application while the upload is finishing can leave a submission unregistered — the trial team receives the files but gets no notification, and the dataset will not appear as submitted. After every upload, confirm the dataset shows as submitted on the trial page (see [Monitoring Submission Status](#monitoring-submission-status)). If it doesn't, see [Troubleshooting](#troubleshooting-common-issues).
+  **Keep AitriumOS open until Submission complete appears.** A progress bar at 100% isn't the end. If you close AitriumOS early, the trial team may get the files without a record of the submission.
 </Warning>
 
-## Monitoring Submission Status
+## Check the submission
 
-Verifying the submission is the final step of every upload — don't skip it:
+Back on the trial page, find the patient. The dataset type's cell reads **Sent** (or **Sent · N required items missing**), and **Last Sent** shows the time.
 
-1. Navigate to the trial homepage in AitriumOS.
-2. Find the patient in the **Submit a Patient Dataset** table and confirm the submission registered: the patient's **Last Sent** time reflects your upload, and the dataset's status no longer shows **Submit Dataset**.
+Select the cell to see "What was sent for this patient, checked against this dataset type."
 
-<img src="/images/trial_submissions/dataset-table-submitted.png" alt="Submit a Patient Dataset table showing a just-submitted patient with an updated Last Sent time and a Complete status" style={{borderRadius: "8px"}} />
+If the cell still reads **Submit Dataset**, or the row says **Last send didn't finish.**, see [Troubleshooting](/aitrium-os/submission-troubleshooting#interrupted-sends).
 
-If the **Last Sent** time has not updated after you saw the **Submission complete** screen, the submission did not finish registering — see [Troubleshooting](#troubleshooting-common-issues).
+## Send a new version
 
-## Resubmitting a Dataset
+To correct or complete a dataset, don't add the patient again.
 
-A submission may need to be repeated — for example, when a dataset was incomplete, an upload failed partway through, or the trial team requests a corrected dataset.
+1. Select the patient's **Sent** cell.
+2. Select **Send a new version** and go through the same steps.
 
-1. Navigate to the trial homepage in AitriumOS and locate the patient in the **Submit a Patient Dataset** table.
-2. The dataset's action button reflects what is needed:
-   - **Complete Required Items** — the dataset is missing required items; provide them to finish the original submission.
-   - **Resubmit Dataset** — the dataset should be submitted again; selecting it restarts the submission flow for that patient.
-3. Prepare the corrected dataset and proceed through the same validation, standardization, de-identification, and review steps as the original submission.
+The trial team sees the new send as the latest. The earlier send stays on record.
 
-<Info>
-  **Do not add the patient again.** Resubmit from the patient's existing row — never re-enter the Trial Patient ID as a new patient. The resubmission becomes the active dataset the trial team reviews; earlier submissions stay recorded for traceability but are no longer the dataset under review.
-</Info>
+<img src="/images/trial_submissions/2-3/eortc-what-was-sent.png" alt="The What was sent dialog for a sent dataset, with the Send a new version button" style={{borderRadius: "8px"}} />
 
-## Best Practices
+## Need help?
 
-<AccordionGroup>
-  <Accordion title="Prepare Your Data">
-    - Ensure that all supplementary non-DICOM files have been pseudonymized.
-    - Ensure that DICOM images do not have burned-in pixels with personally-identifiable information.
-    - Ensure all trial required DICOM data is available for submission
-  </Accordion>
-  
-  <Accordion title="Review Validation Results">
-    - Review the completeness status and address data omissions or errors before proceeding.
-  </Accordion>
-</AccordionGroup>
-
-## Troubleshooting Common Issues
-
-### Validation Failures
-If dataset validation fails:
-- Check the Analysis Result's Data Errors tab.  The DICOM data provided may be corrupted.
-- Check that all trial specific required DICOM data and series are present in the selected folder for upload
-
-### Structure Standardization Issues
-For RT structure problems:
-- Confirm RTSTRUCT files are properly linked to image series
-- Check that structure names can be mapped to trial standards
-- Review the standardization mapping table
-
-### Upload Errors
-If uploads fail:
-- Verify your internet connection stability
-- Confirm your institution's firewall permits the outbound transfer connection — see [Before You Begin](/aitrium-os/overview#before-you-begin)
-- Check available disk space
-- Ensure you have proper trial permissions
-- Contact support if issues persist
-
-### Upload finished but the dataset doesn't show as submitted
-
-If the upload completed but the patient's row on the trial page doesn't reflect it — the **Last Sent** time has not updated, or the dataset still shows **Submit Dataset** — the application was most likely closed before the submission finished registering. The trial team received the files, but no notification was sent and the submission was not recorded.
-
-To resolve:
-- Run the submission again for that patient from the **Submit a Patient Dataset** table, exactly as you did the first time. The trial team can disregard the duplicate file.
-- If the dataset still does not show as submitted, contact [support@aitriumos.com](mailto:support@aitriumos.com) with your trial ID and patient ID.
-
-Verifying every submission on the trial page right after uploading (see [Monitoring Submission Status](#monitoring-submission-status)) catches this immediately instead of weeks later.
-
-
-## Need Help?
-
-If you encounter any issues during the submission process:
-- Review the error messages carefully
-- Consult the trial-specific requirements documentation
-- Contact support at [support@aitriumos.com](mailto:support@aitriumos.com)
+- [Troubleshooting](/aitrium-os/submission-troubleshooting): disk space, connection, interrupted sends, and what to send to support.
+- Contact [support@aitriumos.com](mailto:support@aitriumos.com) with your trial name and Trial Patient ID.

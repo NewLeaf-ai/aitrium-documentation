@@ -13,7 +13,7 @@ For trials that transfer data over SFTP, AitriumOS sends the prepared, de-identi
 
 - **This connection does not use a web (HTTP) proxy.** A corporate proxy handles AitriumOS's HTTPS traffic to Aitrium only. The workstation must be allowed to open the SFTP connection itself.
 - **It is separate from the "Can't reach Aitrium" check.** AitriumOS can connect to Aitrium normally while the trial's SFTP server is still blocked, so check both.
-- **The trial's SFTP server sees the site's public IP address**, not Aitrium's. Some trial organizations only accept connections from addresses they have approved. See [If the trial's server restricts IP addresses](#if-the-trials-server-restricts-ip-addresses).
+- **The trial's SFTP server sees the site's public IP address**, not Aitrium's. Some trial organizations only accept connections from addresses they have approved. See [If the trial's server restricts IP addresses](#if-the-trial’s-server-restricts-ip-addresses).
 
 ## Check an upload destination
 
@@ -62,7 +62,7 @@ The examples below use `sftp.example.org` and port `22`; AitriumOS shows your de
 | **Reachable** | The server answered and the handshake completed. | No action needed. |
 | **Not yet checked** | No check has run on this workstation yet. | Select **Check now**. |
 | **Blocked by a firewall — ask IT to allow outbound TCP 22 to sftp.example.org for AitriumOS (NewLeaf.exe)** | The computer refused to let AitriumOS open the connection. A firewall or endpoint-security rule on the workstation or its network is blocking this program. | Site IT: allow the connection for the program. See [Allowing the connection](#for-site-it-allowing-the-connection). |
-| **No response from sftp.example.org:22 — ask IT to allow outbound TCP 22 to sftp.example.org for AitriumOS (NewLeaf.exe)** | Nothing answered. Usually a firewall is silently dropping the traffic, either the site's outbound firewall or the trial server's IP restrictions. | Site IT first. If the site's firewall allows the connection, the trial organization must approve the site's [public IP address](#if-the-trials-server-restricts-ip-addresses). |
+| **No response from sftp.example.org:22 — ask IT to allow outbound TCP 22 to sftp.example.org for AitriumOS (NewLeaf.exe)** | Nothing answered. Usually a firewall is silently dropping the traffic, either the site's outbound firewall or the trial server's IP restrictions. | Site IT first. If the site's firewall allows the connection, the trial organization must approve the site's [public IP address](#if-the-trial’s-server-restricts-ip-addresses). |
 | **Unreachable — sftp.example.org:22 refused the connection** | The server, or a device in front of it, actively refused the connection. Typically nothing is listening on that port, or the server's firewall rejects the site's address. | Trial organization: confirm the host and port, and approve the site's public IP address if they restrict addresses. |
 | **Can't connect to sftp.example.org:22 — ask IT to allow outbound TCP 22 to sftp.example.org for AitriumOS (NewLeaf.exe)** | The connection failed for another network reason, for example no route to the server. | Site IT. |
 | **Unreachable — sftp.example.org could not be found** | The server's name could not be resolved. | Site IT: confirm the workstation can resolve external names. If the name itself is wrong, the trial organization corrects it. |
