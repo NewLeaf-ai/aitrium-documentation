@@ -7,7 +7,7 @@ import { Audience } from '/snippets/audience.mdx';
 
 <Audience who="Site users (EORTC and RTQA trials)" />
 
-A folder can hold more than one structure set, for example one on the planning CT and one on an MR or a boost plan. AitriumOS sends all of them. It only asks you about the sets that have names to decide.
+A folder can hold more than one structure set, for example one on the planning CT and one on an MR or a boost plan. AitriumOS sends all of them. It asks you only about the sets that have names to decide (and, in RTQA trials, the set QA uses).
 
 ## One step per structure set
 
@@ -17,7 +17,7 @@ Each set that needs a decision gets its own step, for example "Structure set 1 o
 
 - **Decide once.** A name you choose in one set is filled in for the same structure in later sets, with a note such as "Chosen in set 1". You can still change it in a later set. That changes it in that set only.
 - **Nothing to decide.** A later set where every name was already decided reads "Nothing new here. Every name was decided in an earlier structure set."
-- **Sets without a step.** Sets that already use the trial's names have no step. An imaging set that isn't standardized is listed under "Also sent, with the site's names". Both are still sent.
+- **Sets without a step.** Sets that already use the trial's names have no step, except the set QA uses in RTQA trials. An imaging set that isn't standardized is listed under "Also sent, with the site's names". Both are still sent.
 
 The last step says what its button saves, for example "Apply Changes saves both structure sets." Names only need to be unique within a set, so two sets can use the same name.
 

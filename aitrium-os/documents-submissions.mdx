@@ -13,7 +13,7 @@ Documents reach a trial in one of two ways:
 - **Supporting documents in an imaging submission**: documents sent with a patient's images (EORTC trials).
 
 <Warning>
-  AitriumOS doesn't read, check, or change documents. It sends them exactly as you add them. Remove patient information before you add a file.
+  AitriumOS doesn't check documents for patient information or remove it. It sends them exactly as you add them. Remove patient information before you add a file.
 </Warning>
 
 ## Documents-only submissions
@@ -47,7 +47,7 @@ Remove those files, then select **Continue**. Each required card needs at least 
 
 ### Confirm and send
 
-1. Read the confirmation statement for this submission type and tick its box. If you change the files, tick it again.
+1. Read the confirmation statement for this submission type and select its checkbox. If you change the files, select it again.
 2. Select **Submit**.
 3. Check the summary (**Submitting for**, **Trial**, **Destination**, **Files**), then select **Submit documents**.
 
@@ -68,11 +68,11 @@ This applies to EORTC dataset types that name documents (for example a surgical 
 On the analyzer, **Supporting documents** lists each document the dataset type names, marked **Required** or **Optional**.
 
 1. For each document, select **Choose a file** and pick the matching file from the folder. Use **Add another file** if one document spans several files.
-2. Tick **These documents contain no patient identifiers.**
+2. Select the checkbox **These documents contain no patient identifiers.**
 
 <img src="/images/trial_submissions/2-3/supporting-documents.png" alt="Supporting documents section of the analyzer, with one document matched to a file and the confirmation checkbox" style={{borderRadius: "8px"}} />
 
-Files you don't choose aren't sent. A document with no file reads "No file chosen. It's sent without it." Missing documents never stop the submission: the trial team sees what was sent.
+Files you don't choose aren't sent. A required document with no file reads "No file chosen. It's sent without it." Missing documents never stop the submission: the trial team sees what was sent.
 
 ## Related
 

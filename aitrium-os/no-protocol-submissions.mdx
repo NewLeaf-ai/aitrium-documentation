@@ -30,7 +30,7 @@ Each EORTC trial lists its **dataset types** (for example a planning dataset or 
 
 - Confirm your trial training (see [EORTC submission training](/training/basic-submission)).
 - Export one patient's data for one dataset type into its own folder.
-- Remove patient information from any documents you plan to send, including file names. AitriumOS doesn't read or change documents.
+- Remove patient information from any documents you plan to send, including file names. AitriumOS doesn't check documents for patient information or remove it.
 
 ## Add a patient
 
@@ -87,7 +87,7 @@ If the folder has more than one structure set, you go through them one at a time
 AitriumOS de-identifies the DICOM metadata with the trial's de-identification policy, then checks the result. This runs by itself.
 
 <Danger>
-  AitriumOS de-identifies DICOM metadata only. It doesn't remove patient information burned into image pixels, and it doesn't read or change documents. Check both before you send.
+  AitriumOS de-identifies DICOM metadata only. It doesn't remove patient information burned into image pixels, and it doesn't remove patient information from documents. Check both before you send.
 </Danger>
 
 If the disk fills up or a step fails, AitriumOS asks what to do. See [Troubleshooting](/aitrium-os/submission-troubleshooting#de-identification).

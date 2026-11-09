@@ -17,7 +17,7 @@ RTQA trials come set up with study arms, regimens, a schedule, and QA checks. Yo
 
 - Confirm your trial training (see [RTQA submission training](/training/rtqa-submission)).
 - Export one patient's data for one event into its own folder: images, structure set, plan, and dose.
-- Remove patient information from any documents you plan to send, including file names. AitriumOS doesn't read or change documents.
+- Remove patient information from any documents you plan to send, including file names. AitriumOS doesn't check documents for patient information or remove it.
 
 ## Set up a patient
 
@@ -76,7 +76,7 @@ If the folder has more than one structure set, see [Multiple structure sets](/ai
 AitriumOS de-identifies the DICOM metadata with the trial's de-identification policy, then checks the result. This runs by itself.
 
 <Danger>
-  AitriumOS de-identifies DICOM metadata only. It doesn't remove patient information burned into image pixels, and it doesn't read or change documents. Check both before you send.
+  AitriumOS de-identifies DICOM metadata only. It doesn't remove patient information burned into image pixels, and it doesn't remove patient information from documents. Check both before you send.
 </Danger>
 
 If the disk fills up or a step fails, AitriumOS asks what to do. See [Troubleshooting](/aitrium-os/submission-troubleshooting#de-identification).
@@ -135,7 +135,7 @@ On the analyzer, AitriumOS compares the plan with the patient's regimen. Everyth
 
 <img src="/images/trial_submissions/2-3/rtqa-plan-outside-protocol.png" alt="Plan outside the protocol, with the options Submit as planned, Switch, and Select folder" style={{borderRadius: "8px"}} />
 
-**When there's more than one dose file**, AitriumOS asks you to **Choose dose file**. The options are named by plan. The dose you choose decides what QA evaluates: the whole course, or one plan. Select **Use this dose**.
+**When there's more than one dose file**, AitriumOS picks a plan sum that covers every plan by itself. Otherwise it asks you to **Choose dose file**, with options named by plan. The dose you choose decides what QA evaluates: the whole course, or one plan. Select **Use this dose**.
 
 **When the dose isn't the plan's full dose**, choose **Choose a new export** or **Submit without dose checks**. Without dose checks, those checks read **Not evaluated**.
 

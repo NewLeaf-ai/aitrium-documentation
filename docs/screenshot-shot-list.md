@@ -40,11 +40,11 @@ Internal working file (not published: `docs/` is in `.mintignore`).
 
 ### 3. `images/trial_submissions/2-3/supporting-documents.png`
 - **Page/section:** Documents submissions → Supporting documents in an imaging submission.
-- **Screen/state:** same analyzer, scroll to **Supporting documents**. One document row with the PDF chosen (file chip visible), tier **Required**/**Optional** under its name, checkbox **These documents contain no patient identifiers.** ticked.
+- **Screen/state:** same analyzer, scroll to **Supporting documents**. One document row with the PDF chosen (file chip visible), tier **Required**/**Optional** under its name, checkbox **These documents contain no patient identifiers.** selected.
 - **Crop:** the Supporting documents section only, with ~16 px margin.
 
 ### 4. (no file) Continue through the flow
-- Select **Standardize RT Structures** → **Before you continue**: tick both acknowledgments → continue. In standardization select **Apply Changes** (or **Continue with Standard Labels**). Let de-identification run.
+- Select **Standardize RT Structures** → **Before you continue**: select both acknowledgments → continue. In standardization select **Apply Changes** (or **Continue with Standard Labels**). Let de-identification run.
 
 ### 5. `images/trial_submissions/2-3/upload-in-progress.png`
 - **Page/section:** EORTC guide → 5. Upload to trial; RTQA guide → 5. Data transfer (shared).
