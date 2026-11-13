@@ -13,7 +13,7 @@ AitriumOS updates itself from inside the app. You don't need to download anythin
 
 Update when either of these happens:
 
-- **The header shows "Update to" and a version number**, for example **Update to 2.3.5**. AitriumOS checks for updates when you sign in and every hour while it is open.
+- **The header shows "Update to" and a version number**, for example **Update to 2.3.5**. AitriumOS checks for updates when a session starts and every hour while you're signed in.
 - **AitriumOS or your trial team tells you your version is too old** for a trial's upload destination. For example, an upload can fail with *The SFTP server's security settings aren't supported by this version of AitriumOS. Please update AitriumOS or contact Aitrium support.* See [Upload connection troubleshooting](/aitrium-os/connection-troubleshooting#what-the-messages-mean).
 
 ## How to update
@@ -28,7 +28,7 @@ Update when either of these happens:
     Select **Update to** and the version number in the header, at the top right of the window. A panel shows your **Current version** and the **New version**.
   </Step>
   <Step title="Select Update Now">
-    The button shows **Downloading…** while the update downloads. This can take a few minutes.
+    The button shows **Downloading...** while the update downloads. This can take a few minutes.
   </Step>
   <Step title="Let AitriumOS restart">
     AitriumOS closes, installs the update and reopens by itself. On Windows, a small installer progress window appears for a moment. Sign in again if asked.
@@ -38,7 +38,7 @@ Update when either of these happens:
 Your sign-in, settings and submitted data are kept. Every update is cryptographically signed and checked before it is installed.
 
 <Note>
-  If AitriumOS shows *Please restart the application manually to complete the update*, close AitriumOS and open it again.
+  If AitriumOS says *Please restart the application manually to complete the update.* then close AitriumOS and open it again.
 </Note>
 
 ## Check your version
@@ -69,19 +69,24 @@ If you'd rather not need an administrator for future updates, IT can switch the 
 
 The steps are the same: select **Update to**, then **Update Now**, and AitriumOS reopens on the new version.
 
-If AitriumOS shows **Update failed**, your Mac account may not be allowed to change the copy of AitriumOS in **Applications**, for example because another account installed it. Ask someone with administrator rights on the Mac to download the latest version for your processor (Apple Silicon or Intel) from [app.aitriumos.com](https://app.aitriumos.com) → **Downloads** and install it over the existing copy.
+If AitriumOS shows **Update failed**, your Mac account may not be allowed to change the copy of AitriumOS in **Applications**, for example because another account installed it. Ask someone with administrator rights on the Mac to download the latest version from [app.aitriumos.com](https://app.aitriumos.com) → **Downloads** and install it over the existing copy. If no download is offered for your Mac, contact [support@aitriumos.com](mailto:support@aitriumos.com).
 
 ## Other problems
 
 <AccordionGroup>
   <Accordion title="I was told to update, but the header doesn't show “Update to”">
-    Select the version number in the header, then **Check for updates**. If it then shows **You're on the latest version**, no update is needed. Check that the version shown matches what you were told.
+    Select the version number in the header, then **Check for updates**. If it then shows **You're on the latest version**, no update is currently offered. If your version still differs from what you were told, contact [support@aitriumos.com](mailto:support@aitriumos.com).
   </Accordion>
-  <Accordion title="“Couldn’t check for updates” or “Updates unavailable”">
-    AitriumOS couldn't reach its update server. Your submissions are not affected. Ask your IT team to allow `storage.googleapis.com` (see the [firewall allowlist](/security/aitrium-os/data-flows#firewall-allowlist)), then select **Check for updates**. Until then, IT can install the latest version from **Downloads** at [app.aitriumos.com](https://app.aitriumos.com).
+  <Accordion title="“Updates unavailable” in the header">
+    The workstation can reach Aitrium but not the update server, so AitriumOS can't check for or download updates. Ask your IT team to allow `storage.googleapis.com` (see the [firewall allowlist](/security/aitrium-os/data-flows#firewall-allowlist)), then select the version number and **Check for updates**. Until then, IT can install the latest version from **Downloads** at [app.aitriumos.com](https://app.aitriumos.com).
+  </Accordion>
+  <Accordion title="“Couldn't check for updates”">
+    The last update check didn't succeed. Select **Check for updates** to try again. If it keeps failing, contact [support@aitriumos.com](mailto:support@aitriumos.com), or ask IT to install the latest version from **Downloads** at [app.aitriumos.com](https://app.aitriumos.com).
   </Accordion>
   <Accordion title="“Update failed”">
-    The update couldn't be downloaded or installed, and your current version is still installed. Try again later. If it fails again, contact support with the full message.
+    The update couldn't be downloaded or installed. Close and reopen AitriumOS, then try again. If it fails again, contact [support@aitriumos.com](mailto:support@aitriumos.com) with the full message.
+
+    If AitriumOS doesn't open after a failed update, reinstall the latest version from **Downloads** at [app.aitriumos.com](https://app.aitriumos.com). If AitriumOS was installed with the MSI installer, ask your IT team to install the latest MSI installer.
   </Accordion>
   <Accordion title="AitriumOS still shows the old version after updating, or there are two AitriumOS icons">
     The computer probably has two copies of AitriumOS, one from each Windows installer type, and the icon you opened is the copy that wasn't updated. Check **Windows Settings → Installed apps** for more than one AitriumOS entry and follow [Switching Windows installer types](/aitrium-os/overview#switching-windows-installer-types) to keep only one.
