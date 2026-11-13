@@ -36,7 +36,7 @@ Most hospital networks restrict which applications can be installed and which ne
 <Note>
   **For IT staff — requirements for AitriumOS (clinical trial data submission application):**
 
-  - **Installation** — AitriumOS is a desktop application for Windows 10/11 (64-bit; 32-bit available for older releases) or macOS (Apple Silicon or Intel). The user needs it installed on their workstation.
+  - **Installation** — AitriumOS is a desktop application for Windows 10/11 (64-bit; 32-bit available for older releases) or macOS on Apple Silicon (M-series Macs). Intel Macs are not supported by current releases. The user needs it installed on their workstation.
   - **Disk space** — during a submission, the application creates a temporary de-identified working copy of the patient imaging dataset, so the workstation needs transient free space roughly equal to the dataset being submitted. Working copies are deleted automatically when the submission completes or is cancelled (leftovers from interrupted sessions are removed the next time the application starts), so storage utilization does not accumulate over time.
   - **Web access** — outbound HTTPS (port 443) from the workstation to `app.aitriumos.com` and Aitrium service endpoints.
   - **Data upload** — for trials that transfer data over SFTP, outbound SFTP/SSH (TCP, usually port 22) from the workstation directly to the trial's SFTP server. This connection **cannot go through a web (HTTP) proxy**, so outbound firewall rules must permit it. Allow the **program** `NewLeaf.exe` (`C:\Program Files\AitriumOS\` for the MSI installer, `%LOCALAPPDATA%\AitriumOS\` for the standard installer), not just the port. The host and port are listed in AitriumOS under **Settings → Network → Upload destinations**.
@@ -89,8 +89,7 @@ To resolve it:
    - For **Windows**, there are two installers that do the same thing but install differently:
      - **Standard installer** — installs for your account only and does **not** need administrator rights. This is the right choice for almost everyone installing on their own workstation.
      - **MSI installer** — installs machine-wide for all accounts and **requires administrator rights**. Only choose this if your IT department deploys software this way (they will usually know).
-   - For **Mac**: select based on your CPU (Apple Silicon or Intel)
-     - Check by clicking the Apple icon -> About This Mac
+   - For **Mac**: AitriumOS runs on Macs with Apple Silicon (M-series). To check, click the Apple icon → **About This Mac** and look for **Chip: Apple M…**. If your Mac has an Intel processor, contact [support@aitriumos.com](mailto:support@aitriumos.com).
 
 <Warning>
 **Install only one Windows installer type.** The two types don't detect each other, so installing both puts two separate copies of AitriumOS on the computer — two identical icons that can run different versions, which is very confusing. If you're not sure whether AitriumOS is already installed, check **Windows Settings → Installed apps** first: if an AitriumOS entry is already there, update or uninstall that copy instead of installing a second one. The Downloads page will also warn you if you're about to download a different type than you used before.
