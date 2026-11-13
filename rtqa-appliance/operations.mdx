@@ -1,0 +1,448 @@
+---
+title: "Operations runbook"
+description: "Run the Aitrium RTQA appliance day to day: services, health, logs, backups, updates, storage, network checks, and support."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Trial organization IT · Hospital IT running the appliance" />
+
+This page covers running the Aitrium RTQA appliance after it is installed. For the first install, see the [install guide](/rtqa-appliance/install).
+
+<Note>
+  Paths assume the default work directory, `/opt/aitrium/rtqa`. Run every `aitrium-rtqa` command with `sudo`. The command runs anything that touches the appliance's data as the service account, `aitrium-rtqa`, and keeps root for service management and updates.
+</Note>
+
+## Starting and stopping
+
+On Linux, the services run under systemd once you have installed the units:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service install   # once, after install
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service start     # start and enable at boot
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service stop
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service restart
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service status
+```
+
+| Unit | Process | Listens on |
+|---|---|---|
+| `aitrium-rtqa-ingress.service` | TLS edge (built-in edge only) | `:443` and `:80` (redirect), all addresses |
+| `aitrium-rtqa-proxy.service` | Reviewer proxy: sign-in, `/status`, `/healthz`, the setup wizard | `127.0.0.1:8766` |
+| `aitrium-rtqa-ui.service` | Internal UI server: review API, review-state database, image-access audit | `127.0.0.1:8765` (loopback only) |
+| `aitrium-rtqa-worker.service` | Worker: polls Aitrium for work, fetches deliveries, runs the QA analysis | Nothing |
+| `aitrium-llama.service` | Local model server (assisted profile only) | `127.0.0.1:8080` |
+
+- `service start` and `service stop` include the TLS edge. `service restart` and `service status` cover the worker, UI server, and proxy (and the model server on the assisted profile), not the edge. For the edge, use `sudo systemctl restart aitrium-rtqa-ingress.service` and `sudo systemctl status aitrium-rtqa-ingress.service`.
+- After a configuration change, restart the services so they read the new `.env`.
+- When the units are installed, `aitrium-rtqa start` and `aitrium-rtqa stop` hand over to systemd. On a host without systemd, they run the worker, UI server, and proxy (and the model server on the assisted profile) as background processes, with logs under `/opt/aitrium/rtqa/logs/`. Manual start needs the deployment values configured, and it does not run the TLS edge: manage HTTPS separately on such a host.
+
+## Health and status
+
+| Check | What it tells you |
+|---|---|
+| `GET /healthz` | For load balancers and monitoring. `200` when serving, `503` when degraded or in setup mode. The proxy answers it itself, so a dead UI server shows as `503`, not a connection error. No sign-in needed. |
+| `GET /status` | A public status page: the version, the organization, and status lines for the appliance, Aitrium, reviewer access, storage, reclaim, deliveries, and the assistant. Never patient data. A browser gets a page; `curl` gets JSON. |
+| `aitrium-rtqa status` | JSON on the box: runtime state, the storage watermark, whether new work is blocked by disk pressure, and case counts. |
+| `aitrium-rtqa versions` | Installed versions of the appliance, the analysis toolkit, the model server, and the database schema. |
+| `aitrium-rtqa validate` | The full runtime check, including Aitrium connectivity and the analysis toolkit. |
+| **Settings → Overview** | For signed-in administrators: the same facts, a "needs attention" list, the start-up checks, and recent events. |
+
+To limit what `/status` shows, set `RTQA_WEB_STATUS_PAGE` to `minimal` (running or setup required only) or `off` (404). The default is `full`.
+
+### Setup mode
+
+If a start-up check fails (sign-in, signing keys, the organization assignment, storage, the database schema, the analysis toolkit, or Aitrium reachability), the proxy comes up in **setup mode**. `/status` lists what failed, with the fix and the setting that controls it. `/healthz` answers `503 {"status":"setup_required"}`, and other paths answer `503 setup_required`.
+
+The checks run again every 15 seconds. When the cause is fixed, the proxy returns to normal service without a restart, unless the fix was a change to `.env`.
+
+### Disk watermarks
+
+| Setting | Default | What happens |
+|---|---|---|
+| `RTQA_DATA_WATERMARK_SOFT_PCT` | 75 | The appliance warns. |
+| `RTQA_DATA_WATERMARK_HARD_PCT` | 90 | The worker stops taking new work. An incoming archive that would push the disk past it is refused. |
+
+Check usage with `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa storage status`.
+
+## Logs
+
+| Process | Under systemd | Without systemd |
+|---|---|---|
+| Reviewer proxy (sign-in, break-glass, request logs) | journal, `aitrium-rtqa-proxy.service` | `/opt/aitrium/rtqa/logs/proxy.log` |
+| UI server (image-access audit, API) | journal, `aitrium-rtqa-ui.service` | `/opt/aitrium/rtqa/logs/ui.log` |
+| Worker (deliveries, storage reclaim) | journal, `aitrium-rtqa-worker.service` | `/opt/aitrium/rtqa/logs/worker.log` |
+| TLS edge | `/opt/aitrium/rtqa/logs/ingress.log` | same |
+| Model server (assisted only) | journal, `aitrium-llama.service` | `/opt/aitrium/rtqa/logs/llama.log` |
+
+Follow one with:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa logs proxy    # or ui, worker, ingress, llama
+```
+
+### Format
+
+- The proxy and UI server write **one JSON object per line**: `ts` (UTC, ISO 8601), `level`, `logger`, `message` (the event name, for example `rtqa.audit.image_access`), and the event's own fields.
+- The worker writes its own JSON lines, with `timestamp` and `event`.
+- The TLS edge writes a JSON access log, rolled at 50 MiB with 5 files kept. It removes the setup token and the `Referer` header from what it logs.
+- The model server writes plain text.
+
+Slow requests (over `RTQA_WEB_REQUEST_LOG_SLOW_MS`, default 2000 ms) get their own line. Other requests are folded into per-minute summaries.
+
+### Sending logs to your SIEM
+
+The appliance has no built-in syslog or SIEM forwarding. Under systemd, forward the journal with your usual tooling (journald forwarding or a log shipper). The log lines carry sign-ins, image access, break-glass use, configuration changes, and the worker's reclaim events.
+
+<Warning>
+  Log forwarding does not capture the whole audit trail. Most audit records are written only to the review-state database. To keep them outside the appliance, back up the database too. See [Data protection: Audit and logging](/security/rtqa-appliance/data-protection#audit-and-logging).
+</Warning>
+
+Under systemd, journald's own retention applies. Without systemd, the `.log` files are not rotated (only the edge's log is); set up rotation yourself.
+
+The image-access log line carries the DICOM StudyInstanceUID. If your policy treats DICOM UIDs as identifiers, handle the log stream accordingly.
+
+## Backups
+
+Back up the review-state database with:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence backup --output /backup/rtqa/rtqa-20261008.sqlite3
+```
+
+This takes a consistent copy of the live database while the appliance runs. It writes the copy and a `.manifest.json` with its checksum and schema version, both readable only by the service account. The command runs as the service account, so the destination folder must be writable by `aitrium-rtqa`.
+
+The appliance does not schedule backups. Schedule them yourself, for example with root's crontab (in a crontab, `%` must be written `\%`):
+
+```bash
+15 2 * * * /opt/aitrium/rtqa/bin/aitrium-rtqa persistence backup --output /backup/rtqa/rtqa-$(date +\%Y\%m\%d).sqlite3
+```
+
+Copy the backups to an encrypted destination under your backup and retention policy. The backup and its manifest contain patient data: never put them in `/tmp`, a download folder, email, chat, or an unencrypted share. The appliance does not delete old backups.
+
+### What the backup covers
+
+| Covered | Not covered |
+|---|---|
+| The review-state database: review sessions, findings, case reports, the received-case catalog, audit records, and the assistant's conversations | Received DICOM and delivery archives (`inbox/`) |
+| | Staging copies (`staging/`) |
+| | QA results and logs for each attempt (`work/`) |
+| | Log files (`logs/`) |
+| | Configuration and secrets (`.env`, `secrets/`, the install record) |
+| | Anything on reviewer workstations |
+
+Decide separately how to protect the files the backup does not cover. If the host is lost, recovery is a reinstall plus a database restore. Delivered DICOM can be fetched again only if the trial's delivery source still has it. The appliance supports a single host; there is no high-availability mode.
+
+Each update also takes a snapshot of the database before it changes anything, in `/opt/aitrium/rtqa/state/backups/pre-upgrade-<time>.sqlite3`. These stay on the same volume as the database. They are not a replacement for an off-box backup, and the appliance does not delete them.
+
+To check the database at any time:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence status   # path, schema, size, counts; no patient data
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence doctor   # integrity, permissions, file system, audit consistency
+```
+
+## Restoring from a backup
+
+Restore runs in a maintenance window, with every appliance service stopped. Do not edit, move, or delete database files by hand; use these commands.
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa stop --all
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence snapshots    # the backups this release can restore
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence restore --input /backup/rtqa/rtqa-20261008.sqlite3
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence doctor
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa start --all
+```
+
+`persistence snapshots` checks every file under `/opt/aitrium/rtqa/state/backups` (including the pre-upgrade snapshots) and marks the ones the installed release can restore. The backups you keep elsewhere are restored with `--input <path>`.
+
+The restore works in this order:
+
+1. **Checks the backup, without changing anything:** its checksum, its integrity, the schema the file actually holds, and its complete migration history. A backup whose database schema is **newer** than the installed release's, or whose migration history does not match, is refused; restore it with a release that has that schema. (The check is on the database schema, not the release number: a backup from a newer release with the same schema is accepted.) The state directory must be on local storage: a network or FUSE file system is refused before anything changes.
+2. **Checks that nothing is running.** It refuses while this appliance's systemd units are active or any of its UI server, proxy, or worker processes are running, and it takes a lock every appliance process holds while it runs.
+3. **Keeps a safety copy** of the current database, whatever its schema, at `<state dir>/backups/pre-restore-<time>-<id>.sqlite3`, and prints its path.
+4. **Prepares the replacement on a staged copy** beside the live database. A backup from an **older** release is migrated forward there. If anything fails at this point, for example a full disk, the live database is unchanged.
+5. **Swaps it in.** Old database journal files are moved aside first, then the prepared copy replaces the live database in one step. A crash before the swap leaves the old database; a crash after it leaves the restored one.
+6. **Checks the result** as the services do at start-up.
+
+On an appliance with a service account, the restore runs as that account, so the restored database and the safety copy belong to it. A refused or failed restore prints `{"status": "error", "reason": "<code>", ...}`.
+
+### What a restore does and does not roll back
+
+- It restores **the review-state database only**. Received DICOM, attempt results, and logs on disk are not rolled back.
+- Review work done after the backup was taken is not in the restored database. It stays in the safety copy.
+
+### Clean up afterwards
+
+The safety copies (`<state dir>/backups/pre-restore-*`) and any old journal files the restore set aside (`<state dir>/backups/set-aside-journal-*`) **hold patient data**. Nothing removes them automatically. Once the restored appliance is verified, and you have recovered anything you needed from them, delete them by hand under your retention and disposal policy:
+
+Use the exact names the restore printed (`safety_backup_path`, `set_aside_journal_path`). Do not use wildcards: your own shell expands them before `sudo` runs, and it cannot read the service account's state directory. List the folder as the service account first if you need the names:
+
+```bash
+sudo -u aitrium-rtqa ls -l /opt/aitrium/rtqa/state/backups/
+sudo -u aitrium-rtqa rm /opt/aitrium/rtqa/state/backups/pre-restore-<time>-<id>.sqlite3 \
+                        /opt/aitrium/rtqa/state/backups/pre-restore-<time>-<id>.sqlite3.manifest.json
+sudo -u aitrium-rtqa rm -r /opt/aitrium/rtqa/state/backups/set-aside-journal-<time>-<id>
+```
+
+Keep the safety copy if you may move forward to the newer release again: only a release at least as new as the database it holds can open it.
+
+<Warning>
+  The checks prove a backup is intact and was written by a compatible release. They do not authenticate it: an altered file with a rewritten manifest would pass. Restore only backups from a location you trust. The restore's service check also cannot see a process that opens the database file by other means, such as a `sqlite3` shell.
+</Warning>
+
+### Rolling back an update
+
+There are no down-migrations. To go back from a release (N+1) to the release it was upgraded from (N):
+
+<Steps>
+  <Step title="Go back to the previous release">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa update --version <N>
+    ```
+
+    `update` stops every service and runs release N's verified installer with the recorded choices.
+
+    - **If the database schema did not change** between N and N+1, the update finishes as usual (migrate, start, check `/healthz`). The rollback is done.
+    - **If the schema changed**, release N cannot open the newer database. Its installer completes the install, leaves the services **stopped**, and prints the exact restore command with the newest snapshot that passes N's restore checks, normally the pre-upgrade snapshot taken when N+1 was installed. `update` exits with status **3**. If no snapshot passes, it prints `persistence snapshots` so you can see them and why.
+  </Step>
+  <Step title="Restore the snapshot and start">
+    Run the commands the installer printed:
+
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence restore --input <pre-upgrade snapshot>
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa start --all
+    ```
+  </Step>
+  <Step title="Confirm">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa versions
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence doctor
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa validate
+    ```
+
+    Then [clean up](#clean-up-afterwards) the safety copy and any set-aside journal once you no longer need them.
+  </Step>
+</Steps>
+
+If you change your mind at step 2, running the update to N+1 again works from that state.
+
+What a rollback across a schema change costs: review work done on N+1 after its pre-upgrade snapshot is not in the restored database (it stays in the safety copy). Received data, attempt results, and logs are not rolled back.
+
+<Warning>
+  - This procedure works only back to a release that includes it: **`{{FIRST_ROLLBACK_RELEASE}}`** or later (see the release notes). An update runs the *target* release's installer, so an older target cannot do the hand-over above. To go back to a release older than that, contact [Aitrium support](mailto:support@aitriumos.com) first.
+  - It has been tested with the newer release simulated by a higher database schema, but not yet across two published releases. **Rehearse it on a staging appliance** before you rely on it in production.
+</Warning>
+
+## Updates
+
+Updates never happen on their own. **Settings → Updates** in the console shows what is installed and what is available, but the update itself runs on the box:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa versions        # what is installed
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa check-updates   # is a newer release published (exit code 3 if so)
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa update --version <version>
+```
+
+`update` asks you to type `update` to continue (`--yes` skips the prompt, for automation). It then:
+
+1. fetches the target release's manifest and checks its installer (checksum, and signatures when `cosign` is installed);
+2. stops every service;
+3. runs that installer with the choices recorded at install time. The installer snapshots the database, migrates the schema, and checks the database;
+4. starts the services and checks that `/healthz` answers.
+
+The restart interrupts open requests, but it does not sign reviewers out. Plan updates in a maintenance window, and test them on a staging appliance first when you can.
+
+After upgrading from a release that let browsers cache DICOM for a year, purge the appliance's entries once from any reverse proxy or shared cache in front of it. Browsers clear their own copies on the next sign-in, over HTTPS. See [Data protection: Caching](/security/rtqa-appliance/data-protection#caching-of-patient-data).
+
+To go back to the previous release, see [Rolling back an update](#rolling-back-an-update).
+
+Changing the outbound proxy is also done by running the installer again with the new option, not by editing `.env`. See [The service account](/rtqa-appliance/install#the-service-account).
+
+## Changing data locations
+
+The installer's `--state-dir`, `--received-dir`, and `--staging-dir` options set where the appliance keeps its data. **The installer does not move data that is already there.** Choose the locations at install time where you can. To move an existing appliance's data to a new location, do it by hand:
+
+<Steps>
+  <Step title="Stop every service">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa stop --all
+    ```
+  </Step>
+  <Step title="Take a verified backup">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence backup --output /backup/rtqa/rtqa-before-move.sqlite3
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence snapshots
+    ```
+
+    Keep the backup somewhere other than the location you are moving.
+  </Step>
+  <Step title="Move the contents as the service account">
+    Create the new folder for the service account, then copy the contents as that account, keeping modes and times. For example, for the review-state database:
+
+    ```bash
+    sudo install -d -o aitrium-rtqa -g aitrium-rtqa -m 0700 /data/rtqa/state
+    sudo -u aitrium-rtqa cp -a /opt/aitrium/rtqa/state/. /data/rtqa/state/
+    ```
+
+    Use mode `0700` for the state folder and `0750` for the received and staging folders. The state folder must be on local block storage, not NFS or SMB.
+  </Step>
+  <Step title="Run the installer again with the new path">
+    Use the same options as before, plus the new location (and `--confirm-data-dir` if it is outside the work directory, `/srv`, `/data`, `/mnt`, `/media`, `/var/lib`, or `/opt/aitrium`):
+
+    ```bash
+    sudo bash install.sh --version <installed version> --work-dir /opt/aitrium/rtqa \
+      --state-dir /data/rtqa/state <your other install options>
+    ```
+
+    This records the new location, gives it to the service account, and regenerates the systemd units so the services can write there.
+  </Step>
+  <Step title="Check the database">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence doctor
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa persistence status
+    ```
+
+    `persistence status` shows the database path; confirm it is the new one and that the record counts look right.
+  </Step>
+  <Step title="Start the services">
+    ```bash
+    sudo /opt/aitrium/rtqa/bin/aitrium-rtqa start --all
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  If you skip the move, the appliance starts with an **empty** database (or empty received and staging folders) at the new location, and the old data, which contains patient data, stays behind at the old one. Once the appliance is verified at the new location, delete the old copy under your retention and disposal policy.
+</Warning>
+
+## Storage and retention
+
+Retention controls when a case's received DICOM and staging copies **may** be removed. Removing them is called **reclaim**.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `RTQA_DATA_RETENTION_DAYS` | 30 | Days after a case's last activity before its received data may be reclaimed |
+| `RTQA_DATA_FAILED_STAGING_RETENTION_HOURS` | 24 | Hours a failed or orphaned staging copy is kept before it may be reclaimed |
+| `RTQA_DATA_RECLAIM_AUTOMATIC` | `false` | Whether the worker reclaims on its own |
+
+<Note>
+  **Automatic reclaim is off by default** in this release. Until you turn it on, nothing is removed unless you run the cleanup yourself, so received data stays on disk.
+</Note>
+
+### Reclaim by hand
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa storage status       # watermarks and usage
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa storage report       # detailed storage report
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa cleanup --dry-run    # what would go, and what is kept and why
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa cleanup --apply      # shows the plan, then asks you to type 'delete'
+```
+
+`--dry-run` is read-only. `cleanup --apply --yes` skips the prompt for automation. Without `--yes`, a non-interactive `--apply` changes nothing.
+
+### Turn on automatic reclaim
+
+Set `RTQA_DATA_RECLAIM_AUTOMATIC=true` (in **Settings → Configuration**, or in `.env` as the service account), then restart the services. The worker then reclaims between work orders, at most once a day, and at most hourly while the disk is at the hard watermark. The last run shows in **Settings → Storage** and on the `/status` page's **Reclaim** line.
+
+### What reclaim removes, and what it never removes
+
+Reclaim removes only **received deliveries and staging copies**. It never removes the review-state database, cases, findings, reports, or audit records. It also does not remove the per-attempt QA results and logs under `work/`, or files exported to workstations. (Browsers keep no disk copy of images.)
+
+A case history is never reclaimed, whatever its age, while any part of it is held or pinned for review, has an open review session, has an unsigned case report, has pending work, or is being imported. If the appliance cannot read what it needs to decide, it keeps the data. Every deletion is audited before and after it happens. Reclaim deletes files in the ordinary way; it is not secure erasure.
+
+There is no way to delete a whole case in this release. If the trial's data-management plan needs deletion at study close, arrange it with Aitrium.
+
+For the full rules, see [Data protection: Retention and deletion](/security/rtqa-appliance/data-protection#retention-and-deletion).
+
+## Network checks
+
+Print the outbound destinations this appliance needs, for its configuration and profile, and test each one through the configured route:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa network egress          # text
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa network egress --json   # JSON
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa network check           # probe each destination that has a probe
+```
+
+`network check` prints JSON and exits non-zero if a required destination does not answer. Both commands run as the service account, also when started with `sudo`.
+
+The list is an inventory, not an enforced allowlist. It leaves out the SFTP and REDCap hosts that each work order names, and a remote model server if you configure one. Add those to your firewall rules by hand. See [Data flows and network](/security/rtqa-appliance/data-flows#egress-allowlist).
+
+## SFTP delivery host keys
+
+The appliance checks each SFTP delivery host's SSH key before it sends any credential. If a host presents a different key, its deliveries are refused with `input_sftp_host_key_changed`.
+
+First verify the new fingerprint with the delivery provider over a channel you trust, such as a phone call. Then:
+
+- **If the host's key was recorded on first use** (no pin), accept the new key. The fingerprint you give must be the one the host last presented. Accepting and forgetting are both audited.
+
+  ```bash
+  sudo /opt/aitrium/rtqa/bin/aitrium-rtqa sftp host-key show
+  sudo /opt/aitrium/rtqa/bin/aitrium-rtqa sftp host-key accept --host sftp.provider.example --port 22 --fingerprint SHA256:<fingerprint>
+  sudo /opt/aitrium/rtqa/bin/aitrium-rtqa sftp host-key forget --host sftp.provider.example --port 22
+  ```
+
+- **If the host is pinned** with `RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT`, `accept` refuses a different key, because a pin always wins. Change the pin to the verified fingerprint (in **Settings → Configuration**, or in `.env` as the service account), then restart the services:
+
+  ```bash
+  sudo -u aitrium-rtqa nano /opt/aitrium/rtqa/.env      # RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT=SHA256:<new fingerprint>
+  sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service restart
+  ```
+
+Then use **Retry now** on the case's ingestion status in the worklist.
+
+## Emergency access (break-glass)
+
+If reviewers cannot sign in with Aitrium accounts, IT can let the shared local password in for a limited time:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa signin break-glass --minutes 60   # 1 to 1440 minutes
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa signin break-glass --off
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa signin status
+```
+
+It starts and ends without a restart and lapses on its own. While it is on, the console shows a red banner and `/status` shows a warning. Every break-glass sign-in is logged. See [Access management](/security/rtqa-appliance/access-management#the-shared-local-password).
+
+## Rotating the proxy secret
+
+The reviewer proxy proves itself to the UI server with a secret in `/opt/aitrium/rtqa/state/proxy-token`. Rotate it, for example after moving a state directory to another machine:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa proxy-token rotate
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service restart
+```
+
+The running services keep the secret they started with, so rotation takes effect only when both restart. Restart both: while one runs with the old secret and the other with the new one, signed-in requests are refused.
+
+## Adding the assistant later
+
+The review profile has no AI component. To add the optional local assistant, check the host against the [assisted requirements](/rtqa-appliance/requirements), get the model ID from Aitrium, then run:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa assistant enable --model <model id>
+```
+
+It runs the assisted preflight first and stops, changing nothing, if anything blocks. It installs only through the installed release's verified installer, records every file and package it adds, and rolls back if a step fails. The console never installs it. An administrator then chooses the assistant's mode in **Settings → Assistant**; it starts off.
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa assistant disable           # stop it and return to the review profile; files stay
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa assistant disable --purge   # also remove eligible files and packages the appliance installed
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa components --json           # what is actually installed
+```
+
+`--purge` removes only what the install ledger shows the appliance added, and only while it is unchanged. Files that were modified, files or packages that were already there or that something else still needs, host build tools, and the model server's log are kept. Check what it reports as kept.
+
+On Linux with an NVIDIA GPU, load the `nvidia-uvm` driver module at boot (for example with `nvidia-persistenced`). The hardened units stop the driver from loading it on first use.
+
+## Getting help from Aitrium
+
+There is no single support-bundle command. When you contact [Aitrium support](mailto:support@aitriumos.com), send:
+
+- the output of `aitrium-rtqa versions`, `aitrium-rtqa validate`, `aitrium-rtqa persistence status`, and `aitrium-rtqa persistence doctor`;
+- the host's operating system and architecture (and, on the assisted profile, the GPU model and memory);
+- recent worker and proxy logs, and any installer error output.
+
+Review logs before you send them. Do **not** attach the database, a backup, or a session export unless you have agreed a channel with Aitrium that is approved for patient data.
+
+From the review application, a reviewer can also use **Report to Aitrium** on a case's ingestion status in the worklist. It sends a fixed set of fields about the failure and an optional note, never the case's DICOM. See [Data flows and network](/security/rtqa-appliance/data-flows) for exactly what it sends.
