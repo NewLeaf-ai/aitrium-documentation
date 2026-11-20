@@ -45,6 +45,7 @@
             "icon": "square-terminal",
             "pages": [
               "aitrium-os/overview",
+              "aitrium-os/updating",
               "aitrium-os/whats-new-2-3"
             ]
           },
