@@ -1,0 +1,94 @@
+---
+title: "Known Limits"
+description: "Current behavior of the Aitrium RTQA appliance that a security reviewer should weigh, stated plainly."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Security and compliance reviewers" />
+
+These are the current behaviors of the Aitrium RTQA appliance that matter most for a security review. They are not commitments to change anything. Where a fact can only come from Aitrium as the vendor, the entry says "vendor to supply".
+
+## 1. Workstation copies and caching
+
+- DICOM and every other `/api/` response are served with `Cache-Control: no-store`, so compliant browsers and shared caches do not store them. While a review tab is open, the viewer holds the images it has read in that tab's memory. Closing or reloading the tab releases them, and so do signing out and a change of reviewer or organization (both reload every open appliance tab).
+- **Session expiry does not release them.** An expired tab keeps what it loaded in memory, hidden and inert behind the sign-in view, until the same reviewer resumes, someone else signs in, the reviewer signs out, or the tab is closed. A workstation left unlocked with an expired review tab is still a workstation holding patient data. **Apply a workstation screen-lock policy** (automatic lock after a short idle time) on every machine reviewers use, and have reviewers sign out rather than let a session expire. A browser that ignores `no-store`, a swap file, or a crash dump can still put that memory on disk.
+- **Copies cached by an earlier release.** Earlier releases served DICOM with a one-year `immutable` cache lifetime. They are retired by a new DICOM path and by `Clear-Site-Data: "cache"` on sign-out and once after the upgrade. That header works only over HTTPS and only in the browser. **A site reverse proxy or shared cache that stored DICOM under the old headers keeps those entries until they expire (up to a year): purge the appliance's entries from it after upgrading.**
+- Reviewers can download a case report as Markdown and print it. Administrators can export SQL console results as CSV.
+- Server-side retention and reclaim, and removing someone from a session, do not erase reports and exports already saved on a workstation, or images held in another reviewer's tab that is still open. Workstation disk encryption, print handling, and managed-device controls are your organization's.
+
+## 2. Local access to the UI server
+
+The UI server (`127.0.0.1:8765`) answers only requests carrying the proxy's secret from `<state dir>/proxy-token` (mode 0600, owned by the service account), in every sign-in mode. `GET /healthz` is the one unauthenticated route, and it returns no data. Other local accounts get `401`. But anything running as the service account or root can read the secret and call the UI server as the local account (a reviewer in `jwt` mode with `RTQA_SIGNIN_LOCAL_ROLE` unset; with the role set, that role, and `ADMIN` would include the administration pages and the SQL console) or assert any identity. Treat the service account and root as trusted, and keep interactive logins on the appliance host to administrators. The model server (`127.0.0.1:8080`, assisted profile only) still has no authentication.
+
+## 3. Authorization boundaries
+
+- Session membership governs review-session content. The worklist and image routes are scoped to the organization, not to session membership, so any signed-in user of the organization can open them.
+- The administrator SQL console is read-only, but it reads the whole review-state database, including session content from any session, in every organization stored there. Each query and each refused attempt is audited. In `jwt` mode, the shared local password is an administrator during setup and break-glass, so it reaches the SQL console in those windows.
+- Changes sent by the current application are tagged with the sign-in they were drafted under, and a mismatched tag is refused. Untagged changes, sent only by older clients, are still accepted and logged.
+- This documentation does not include an endpoint-level authorization matrix.
+
+## 4. Audit coverage and failure behavior
+
+- Most audit records are written only to the database; log forwarding does not carry them.
+- The image-access audit is buffered and can lose hits still in memory on a crash or a database failure.
+- The break-glass database row is best effort; the log line is the reliable record.
+- Log formats differ by process (proxy and UI server, worker, edge, model server).
+- A client-side export (a report Markdown download, printing, a SQL console CSV) is not itself audited. The SQL query that produced the CSV is.
+- Audit records are not tamper-evident.
+
+See [Audit and logging](/security/rtqa-appliance/data-protection#audit-and-logging).
+
+## 5. Where patient data is stored, and what a backup covers
+
+Patient data can be in:
+
+- the review-state database: review content, findings, reports, the received-case catalog, audit rows, and the assistant's conversations and model audit trail (`RTQA_ASSISTANT_MODEL_AUDIT_MODE`, default `summary`);
+- the received zone, including the downloaded archive kept next to each delivery (`RTQA_INGEST_KEEP_ARCHIVES`, default `true`);
+- staging, including supplemental inputs such as REDCap data;
+- the attempt results and logs under `work/`;
+- `logs/`, database backups, support exports, and the restore's safety copies and set-aside journals;
+- workstation exports, and the memory of open (or expired) review tabs.
+
+The database backup command copies only the database. Encryption, backup, and retention decisions need to cover every location above.
+
+## 6. Deletion
+
+`RTQA_DATA_RETENTION_DAYS` is an eligibility threshold, not a guaranteed deletion time. Reclaim removes only received deliveries and staging copies, never `work/`, the database, or workstation copies. There is no case-deletion path in this release. Deletion is ordinary file removal, not secure media erasure: on SSDs and copy-on-write file systems, deleted data can remain recoverable until the space is reused. Rely on full-disk encryption and your media-disposal process.
+
+## 7. Session revocation
+
+Reviewer token validation is stateless. Signing out clears the browser's cookie, and neither sign-out nor an appliance restart revokes the token. A token already issued stays valid until it expires, even after the user is removed in Aitrium. The appliance has no per-token or per-user revocation list. Whether reviewers can keep working during a control-plane outage depends on the in-memory key cache and on each token's expiry; no outage duration is guaranteed.
+
+## 8. Installation trust and overrides
+
+- The documented first install fetches `install.sh` from the release bucket and runs it, protected by https only. Verify the file with `cosign verify-blob` before running it if that matters to you (see [Supply chain](/security/rtqa-appliance/supply-chain)).
+- Signature checks run only when `cosign` is on the host. Without it, the sha256 checks show that the files match the manifest that was fetched, not who published it.
+- `--allow-unpinned`, `--allow-unsigned`, `--allow-insecure-http`, and `--channel dev` relax verification for development. Ask whoever installed the appliance whether any was used. The channel is recorded in the install record. Whether the other options were used should be taken from the install output; this documentation does not claim the record captures them.
+
+## 9. Release evidence and operational commitments
+
+This documentation describes how releases are built. It cannot show that a given release was built that way. For the release you install, ask Aitrium for the release manifest, the signature verification result, the SBOMs, and the CI results.
+
+Vendor to supply:
+
+- patch and security-fix timelines;
+- support lifetime per release;
+- vulnerability disclosure process;
+- incident-response contacts and notification terms;
+- recovery objectives (RTO and RPO);
+- penetration-test evidence.
+
+## 10. Rollback across a schema change
+
+- There are no down-migrations. Going back to an older release after its schema moved means restoring a snapshot that release can run, normally the pre-upgrade snapshot. Review work done after that snapshot is not in the restored database. It stays in the restore's safety copy, which only a release at least as new can open.
+- The restore covers the database only. Received data, attempt results, and logs written by the newer release stay on disk.
+- The state directory must be on verified local storage. The restore refuses a network or FUSE file system (NFS, SMB, MooseFS, s3fs, and others) before changing anything.
+- The restore's safety copies (`backups/pre-restore-*`) and any journal it set aside (`backups/set-aside-journal-*`) hold patient data and are never removed automatically. Delete them by hand once the restore is verified.
+- Without systemd, `aitrium-rtqa stop` signals only this install's processes, identified by executable and work directory. PID files and the worker and model-server owner records are hints only.
+- A supplied snapshot must come from a trusted location. Its checksum and migration history show that it is intact and from a compatible release; they do not authenticate its contents (the manifest can be rewritten to match an altered file).
+- The restore's service check covers processes started through the appliance. A process that opens the database file by other means, such as a `sqlite3` shell, is not detected.
+- The procedure works only back to **`{{FIRST_ROLLBACK_RELEASE}}`** or later (see the release notes): an update runs the target release's installer, which must include the hand-over. A same-schema downgrade can work without it.
+- It is tested with the newer release simulated by a higher schema on the live database. It has not yet been run across two published releases. Rehearse it in staging.
+
+Contact [support@aitriumos.com](mailto:support@aitriumos.com).

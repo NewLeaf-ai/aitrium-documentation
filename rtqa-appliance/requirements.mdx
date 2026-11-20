@@ -1,0 +1,113 @@
+---
+title: "System requirements"
+description: "Host sizing for the Aitrium RTQA appliance, and what the installer's preflight checks before it installs anything."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Trial organization IT · Hospital IT hosting the appliance" />
+
+The Aitrium RTQA appliance installs directly on a Linux server or VM that your organization provides. It is not delivered as a container image. Before it installs anything, the installer runs a **preflight** that measures the machine against the minimums below.
+
+The appliance has two profiles:
+
+- **review** (the default): deterministic QA, the review workspace, findings, sign-off, and signed reports. No GPU, no AI model, and no compiler.
+- **assisted** (optional): everything in review, plus a local AI assistant that runs on the appliance's own GPU. You can add it later. See [Adding the assistant later](/rtqa-appliance/operations#adding-the-assistant-later).
+
+## Appliance host
+
+| | review (default) | assisted |
+|---|---|---|
+| **Operating system** | Linux x86_64 for production. macOS (Apple Silicon or Intel) for workstation and test installs. | Same as review |
+| **Python** | 3.11 or newer, able to create a virtual environment (on Debian and Ubuntu, install `python3-venv`) | Same as review |
+| **vCPU** | 2 minimum, 4 recommended | Same as review |
+| **RAM** | 8 GiB minimum, 16 GiB recommended | 24 GiB minimum, 32 GiB recommended |
+| **Free disk, per data volume** | 20 GiB minimum, 100 GiB recommended. About 250 GiB of SSD is advised for production. | The volume that holds the model weights needs 40 GiB more (60 GiB more recommended). On a single volume: 60 GiB minimum, 160 GiB recommended. |
+| **Storage type** | The review-state database on local block storage. Network file systems (NFS, SMB) are not supported for it. | Same as review |
+| **GPU** | Not needed, not checked | Linux: an NVIDIA GPU with at least 20 GiB of memory and its driver. A 24 GB-class card such as an NVIDIA L4 or A10 is recommended. macOS: Apple Silicon, where the model uses the host's RAM. Intel Macs are not supported for the assistant. |
+| **Tools** | `curl` and `tar` | Same as review |
+
+Received DICOM grows with use. Size the volume that holds it for the trial's expected volume, and plan for it to keep growing until data is reclaimed (see [Storage and retention](/rtqa-appliance/operations#storage-and-retention)).
+
+<Warning>
+  The appliance does **not** encrypt data at rest, and the preflight does not check whether a disk is encrypted. Put the appliance's work directory, its data directories, and your backup destination on volumes your organization encrypts, for example with LUKS or your hypervisor's or cloud provider's encrypted volumes.
+</Warning>
+
+### Where the data lives
+
+By default everything is under one work directory, `/opt/aitrium/rtqa`. You can put the data on other volumes at install time with `--state-dir`, `--received-dir`, and `--staging-dir` (and `--model-dir` for the assisted profile). The preflight measures each volume separately. Choose these locations before you install: the installer does not move data that is already there (see [Changing data locations](/rtqa-appliance/operations#changing-data-locations)).
+
+| Data | Default location | Holds |
+|---|---|---|
+| Review state | `/opt/aitrium/rtqa/state` | The review-state database (sessions, findings, case reports, audit records). Must be on local block storage. |
+| Received | `/opt/aitrium/rtqa/inbox` | DICOM delivered for each case, and the downloaded archive |
+| Staging | `/opt/aitrium/rtqa/staging` | Working copies of DICOM for each processing attempt |
+| Work | `/opt/aitrium/rtqa/work` | QA results, reports, and logs for each processing attempt |
+| Models (assisted only) | `/opt/aitrium/rtqa/models` | AI model weights. Not patient data. |
+
+Every location except the models holds patient data. See [Architecture: Storage](/security/rtqa-appliance/architecture#storage).
+
+## What the preflight checks
+
+Run the preflight yourself before installing, with the same options you will install with. It installs nothing.
+
+```bash
+curl -fsSL -o install.sh "https://storage.googleapis.com/rtqa-appliance-releases/latest/install.sh"
+sudo bash install.sh --preflight --work-dir /opt/aitrium/rtqa --site-hostname rtqa.hospital.example
+```
+
+Add `--profile assisted` to check for the assistant, `--env-file <file>` if you will merge deployment values from a file, and `--json` for one JSON object instead of a table.
+
+The exit code is **0** when the machine is ready (warnings allowed) and **1** when something blocks the install. An option the installer cannot accept, such as a port outside 1–65535, also stops it with a one-line message.
+
+In general, a value below the minimum **blocks** and a value below the recommended size **warns**. Something the preflight cannot measure warns rather than blocks.
+
+| Check | Blocks when | Warns when |
+|---|---|---|
+| **Operating system** | Not Linux x86_64 or macOS | |
+| **Python** | Older than 3.11, or it cannot create a virtual environment | An existing virtual environment does not work (the installer rebuilds it) |
+| **CPU** | Fewer than 2 vCPUs | Fewer than 4 vCPUs |
+| **Memory** | Below the profile minimum. Memory is compared with 10% slack, so a machine sold as 8 GB passes. | Below the recommended size |
+| **Disk space** | A volume holding a data location has less free space than the minimum | Below the recommended size |
+| **Network ports** | A port the appliance needs is held by another program, or two services are set to the same port | A port cannot be tested without root |
+| **Storage locations** | A location cannot be written or created, or the review-state database is on a network file system | A data location is on a network file system (it must support file locks), the file system type is unknown, or a location is writable by every user |
+| **Outbound network** | An installer download does not answer through the configured proxy and CA, or a proxy, CA, or Aitrium URL setting is unusable | The running appliance's destinations, such as the Aitrium control plane, do not answer (before install) |
+| **Clock** | More than 5 minutes off, confirmed by two independent servers that agree | More than 60 seconds off |
+| **Service user** | After install: the service account is missing | After install: a data directory is not owned by the service account |
+| **GPU** (assisted only) | No NVIDIA GPU reported, or less GPU memory than the minimum. An Intel Mac blocks. | A GPU whose memory cannot be measured |
+
+On a new install, a blocking problem stops the installer before it changes anything. On an upgrade, the same report is shown as warnings and the install continues.
+
+The ports the preflight checks are the reviewer proxy (`127.0.0.1:8766`), the internal UI server (`127.0.0.1:8765`), ports 443 and 80 on every address when you use the built-in TLS edge, and the model server (`127.0.0.1:8080`) for the assisted profile.
+
+<Note>
+  The preflight does not check disk encryption, operating-system patch level, antivirus, or host hardening. Those are your organization's.
+</Note>
+
+### On an installed appliance
+
+The same checks run against the installed configuration:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa preflight
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa preflight --profile assisted --json
+```
+
+Here the exit code is **0** ready, **1** blocking, and **2** for bad arguments. Once installed, the Aitrium control plane's address blocks if it does not answer. The check also reports which account the services run as, and who owns each data directory.
+
+## Reviewer workstations
+
+The preflight does not check reviewer workstations. Reviewers need:
+
+- 8 GB of RAM;
+- a current Chrome or Edge with WebGL2;
+- HTTPS access to the appliance's hostname (not plain HTTP: the browser cache reset needs HTTPS);
+- HTTPS access to `identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, and `www.googleapis.com`, which the browser uses to sign in to Aitrium accounts.
+
+Apply a screen-lock policy on reviewer workstations. An expired review tab still holds the patient data it loaded in memory until the reviewer signs back in, someone else signs in, or the tab is closed.
+
+## Next step
+
+<Card title="Install the appliance" icon="download" href="/rtqa-appliance/install">
+  Gather the inputs, run the installer, and complete first-run setup.
+</Card>

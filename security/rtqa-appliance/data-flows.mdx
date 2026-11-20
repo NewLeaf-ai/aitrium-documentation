@@ -1,0 +1,199 @@
+---
+title: "Data Flows & Network"
+description: "What leaves the Aitrium RTQA appliance and by which path, the egress allowlist, inbound ports and bind addresses, and outbound proxy support."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Security and compliance reviewers · Trial organization IT (firewall rules)" />
+
+The Aitrium RTQA appliance holds patient data on your host. This page lists every path by which data leaves it, what each path carries, and the network rules your firewall needs.
+
+## What leaves the box
+
+Raw DICOM is never uploaded through the control-plane API. Requests to Aitrium's control plane pass an **outbound allow-list** that permits only declared fields of declared types (see [How the allow-list works](#how-the-allow-list-works)). What it sends includes case-linked derived results: grades, counts, reason codes, and bounded measurement values.
+
+Two fields accept text a person types:
+
+- **Colleague search:** a reviewer's search for a colleague by name or email, at most 200 characters on one line, sent to Aitrium's staff directory.
+- **Support note:** an optional note a reviewer adds to a support report, at most 2,000 characters. The dialog warns not to include patient details, and specific patterns (paths, file extensions, identifiers introduced by words such as patient, subject, PID, or MRN) are scrubbed.
+
+These limits, the warning, and the scrubber reduce the risk. They cannot guarantee that a user never types patient details: names, dates, and unrecognized identifiers can pass.
+
+Other data leaves the appliance by other paths:
+
+- the trial's **SFTP and REDCap services** (REDCap receives a record locator that the control plane supplied);
+- a **remote model server**, if one is configured, which receives assistant prompts that can contain case data;
+- **reviewer workstations**, through report downloads and printing and SQL console CSV exports (see [Known limits](/security/rtqa-appliance/known-limits)). Every `/api/` response, including images, is `Cache-Control: no-store`, which forbids browsers and shared caches from storing it. This is an HTTP caching rule, not a guarantee that patient data never reaches a workstation's disk: a browser that ignores `no-store`, a swap file, or a crash dump can still put it there, and exports are saved files.
+
+## Data classes
+
+| Class | Meaning | Leaves the box? |
+|---|---|---|
+| `CLOUD_SAFE` | Grades, counts, reason codes, IDs, case-linked derived measurement values (bounded numbers), and text the control plane itself published | Yes, to the Aitrium control plane only, through the outbound allow-list |
+| `PHI_LOCAL` | Raw DICOM and patient-level case data other than the `CLOUD_SAFE` summaries | No (but see the typed-text fields, REDCap, and a remote model server above) |
+| `SITE_CONFIDENTIAL`, `LOCAL_CLINICAL`, `LOCAL_OPERATIONAL` | Site configuration, reviewer findings and notes, operational records | No |
+
+Examples of `PHI_LOCAL` data the control-plane API never sends: DICOM files and their headers, patient and study identifiers in the DICOM, structure names as they appear in the DICOM, DICOM technique strings, reviewer findings and notes, case reports, worker log text, file paths, and file names.
+
+## How the allow-list works
+
+Every registered control-plane request is checked before a token is fetched or a byte is sent:
+
+- The request must name a **registered route**. Unknown routes are refused.
+- Every path parameter, query parameter, form field, and JSON field must match its **declared type**: a UUID, an enum value, a bounded integer or number, a boolean, an ISO 8601 time, a short code, a bounded pattern, or a closed nested object or list.
+- **Unknown keys are refused**, and so is a value of the wrong type (a `"1"` where an integer is declared).
+- **Prose is never copied.** A rule's rationale is replaced by a sentence the appliance builds from codes and numbers. A support report's message is replaced by the fixed sentence for its reason code. The allow-list accepts each only when it equals exactly what the appliance would build.
+- **Echoes.** Rule names, expected structure names, rule codes, domains, tiers, metric codes, and evidence references must each be exactly a string the control plane published in that work order's bootstrap bundle, or a code the appliance registered.
+- **Measurements** are a closed object of numbers bounded by the rule's unit (for example Gy 0–1000, % 0–1000, cc 0–100,000, mm 0–1000).
+- **Identity is pinned.** The deployment ID must equal the configured one.
+- **Defense in depth.** Many string checks also scan for path-like and DICOM or archive file-name-like content. This is not a scan of every string: credentials are deliberately not scanned.
+- **Headers are outside the allow-list.** It checks the declared path, query, form, and JSON values. Headers are added after it: token requests carry the client credentials; ordinary API requests carry the machine access token and the appliance ID; collaboration requests add the reviewer's token; the sign-in exchange carries the reviewer's Firebase ID token.
+- **A refusal** logs one line naming the route and the field's location, never its value.
+
+The bootstrap bundle comes from Aitrium's own control plane, so its content is trusted as a source of echoed values. An echoed value must still be in the permitted set for its field and pass that field's string checks.
+
+### Control-plane routes
+
+All paths are under the control-plane URL Aitrium gives you (`RTQA_SITE_API_URL`).
+
+| Route | Method and path | Sent by | What it sends |
+|---|---|---|---|
+| `oauth_token` | `POST` the token path | Worker, API client | Form: `grant_type=client_credentials`, client ID and secret (never logged) |
+| `work_orders_pending` | `GET /external/v1/rtqa/work-orders/pending` | Worker | Query: `limit` (1–500) |
+| `project_sites` | `GET …/projects/{project_id}/sites` | Worker | Path: project UUID |
+| `work_order` | `GET …/work-orders/{work_order_id}` | Worker | Path: work order UUID |
+| `work_order_claim` | `POST …/work-orders/{work_order_id}/claim` | Worker | Path: work order UUID; no body |
+| `bootstrap_bundle` | `GET …/work-orders/{work_order_id}/bootstrap` | Worker | Path: work order UUID |
+| `expected_data` | `GET …/work-orders/{work_order_id}/expected-data` | Worker | Path: work order UUID |
+| `run_input_access` | `GET …/work-orders/{work_order_id}/input-access/{input_key}` | Worker | Path: work order UUID and an input key |
+| `deployment` | `GET …/deployment` | Worker, proxy | Nothing |
+| `status_event` | `POST …/work-orders/{work_order_id}/status-events` | Worker | JSON: see below |
+| `support_report` | `POST …/work-orders/{work_order_id}/reports` | UI server | JSON: see below |
+| `collaboration_token` | `POST` the token path | Proxy | Form: client credentials |
+| `reviewer_eligibility` | `GET …/projects/{project_id}/reviewer-eligibility` | Proxy | Path: project ID |
+| `collaborator_search` | `POST …/projects/{project_id}/eligible-collaborators/search` | Proxy | JSON: `query` (colleague search, at most 200 characters, one line), up to 100 user UUIDs, `limit` (1–100), `offset` |
+| `reviewer_token_exchange` | `POST …/reviewer-token` | Proxy | No body. The reviewer's Firebase ID token in a header, exchanged for a reviewer token. It carries the reviewer's own name and email. |
+
+**Status events** carry IDs, enums, registered reason codes, times, an attempt number, and an optional summary: the overall grade, whether review is required, failure and warning codes, rule grade counts, and up to 2,000 rule evaluations. Each rule evaluation carries echoes of the bundle (rule code, name, domain, tier, metric code, expected structure name), enums for status, result, and grade, registered codes, a rationale generated from codes, evidence references, and a closed object of bounded measurements, such as a measured dose.
+
+**Support reports** carry a registered reason code, the stage, the fixed sentence for the reason code, the optional support note (at most 2,000 characters, scrubbed), the appliance version, attempt details, and diagnostics: IDs, stages and their times, retry state, and up to 50 worker event codes from a fixed list with their times. Never log text.
+
+### Fields that carry prose
+
+| Route | Field | Kind |
+|---|---|---|
+| `status_event` | rule evaluation `rationale` | Generated on the box from codes and numbers |
+| `status_event` | rule evaluation `rule_name`, `structure_expected_name`, `band_label` | Echo of the control plane's own text |
+| `support_report` | `message` | Generated on the box |
+| `support_report` | `note` | Typed by a person (the support note). Specific path, file-extension, and patient/subject/PID/MRN-prefixed patterns are scrubbed; names, dates, and other identifiers can remain. |
+| `collaborator_search` | `query` | Typed by a person: staff identity sent to Aitrium's directory. A user could type anything up to 200 characters. |
+
+This is the list of prose fields. The other echo fields above can also carry strings the control plane published.
+
+### Outbound traffic that does not go to the control plane
+
+These requests do not pass the allow-list, because they are not control-plane requests. They use the same proxy and CA settings, except SFTP, which uses its own tunnel when enabled.
+
+| Destination | What is sent | What comes back |
+|---|---|---|
+| Signing keys (JWKS), on the control plane by default | A `GET`, nothing else | Public signing keys |
+| Release manifest (`storage.googleapis.com`, `github.com`) | A `GET`, nothing else | The release manifest, for **Settings → Updates** and the update command |
+| SFTP delivery host (per work order) | SSH login with the credentials the control plane supplied | The delivery archive |
+| REDCap (per work order, only if the trial uses it) | A form `POST` to the URL in the control-plane-supplied credentials: the REDCap API token and the locator fields (record or patient ID, fields, forms, events) as supplied by the control plane. The appliance does not require that URL to be https. | Case data, stored in staging |
+| Hugging Face (assisted profile only) | `GET`s for the pinned model revision | Model weights |
+| Model server (assisted profile only) | Assistant prompts, which **can contain case data** | Model output |
+
+With the default managed runtime, the model server is `127.0.0.1:8080` on the same host, so prompts never leave the host. If `RTQA_ASSISTANT_ENDPOINT` names another host, prompts go to that server. The appliance does not know who operates it; your organization is responsible for it and for the network path to it.
+
+## Egress allowlist
+
+The appliance prints an inventory of the destinations its configuration and profile need:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa network egress           # text
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa network egress --json    # JSON
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa network check            # probe each destination that has a probe
+```
+
+The same list appears under `egress` in `aitrium-rtqa preflight --json`. Before installing, `bash install.sh --preflight --json` adds the installer's own download hosts.
+
+<Warning>
+  The printed list is an inventory, **not an enforced allowlist**. The appliance does not block other destinations; firewall rules are yours. The list leaves out a remote model server and the SFTP and REDCap hosts each work order names. Add those by hand.
+</Warning>
+
+### Running appliance, review profile (default)
+
+| Host | Port | Purpose | Required |
+|---|---|---|---|
+| The control-plane host from `RTQA_SITE_API_URL` (given by Aitrium at onboarding) | 443 | Work orders, status events, support reports, the reviewer sign-in exchange, and the signing keys (same host by default) | Required |
+| `storage.googleapis.com` | 443 | Release manifest (**Settings → Updates** and the update command) | Optional |
+| `github.com` | 443 | Release manifest (second source) | Optional |
+| `objects.githubusercontent.com` | 443 | GitHub release downloads (redirect target) | Optional |
+| `release-assets.githubusercontent.com` | 443 | GitHub release downloads (redirect target) | Optional |
+
+If `RTQA_SIGNIN_JWKS_URL` names a different host, it is listed as a separate required entry. With the built-in edge, an update also downloads the Caddy archive from `github.com` and its two redirect hosts, which are already in the list.
+
+### Running appliance, assisted profile
+
+Everything above, plus:
+
+| Host | Port | Purpose | Required |
+|---|---|---|---|
+| `huggingface.co` | 443 | Model weights download | Optional |
+| `cdn-lfs.huggingface.co` | 443 | Model weights download (redirect) | Optional |
+| `cdn-lfs.hf.co` | 443 | Model weights download (redirect) | Optional |
+| `cas-bridge.xethub.hf.co` | 443 | Model weights download (redirect) | Optional |
+
+The model hosts are needed only while a model is being downloaded. After that, the local model server needs no external connection.
+
+### Not in the printed list
+
+- **A remote model server**, if `RTQA_ASSISTANT_ENDPOINT` names one. It receives the assistant's requests, which can contain case data.
+- **SFTP delivery hosts** (TCP 22 or the delivery's port) and **REDCap hosts** are named per work order by the control plane, so they cannot be listed in advance. Ask Aitrium for the trial's delivery host. SFTP goes direct by default. With `RTQA_NETWORK_SFTP_VIA_PROXY=true` it goes through your outbound proxy as an HTTP `CONNECT` tunnel, and the proxy must allow `CONNECT` to the delivery port. REDCap goes through the proxy.
+- **Reviewer browsers**, not the appliance, must reach `identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, and `www.googleapis.com` over 443 to sign in. These are the only third-party hosts in the application's Content Security Policy `connect-src`.
+
+### Install and update time
+
+The installer downloads from (review profile):
+
+| Host | Purpose |
+|---|---|
+| `storage.googleapis.com` (bucket `rtqa-appliance-releases`), `github.com` and its two redirect hosts | Release manifest, the appliance package, constraints, SBOMs, and signature bundles (either manifest host is enough) |
+| `pypi.org`, `files.pythonhosted.org` | Python dependencies, unless you give your own mirror with `--pip-index-url` |
+| `storage.googleapis.com` (bucket `aitrium-toolkits`) | The analysis toolkit's manifest and installer |
+| `github.com` (Caddy releases) and its redirect hosts | The Caddy binary, built-in edge only (or your `--caddy-url` mirror's host instead) |
+
+The assisted profile adds `github.com` (llama.cpp archive or source) and `huggingface.co` (model weights). A source build of llama.cpp may run `apt-get` against the host's configured OS package repositories to install build tools, and mirrors or URLs given on the command line add their own hosts. A local `file://` manifest mirror does not by itself make an install offline.
+
+## Inbound ports and bind addresses
+
+| Listener | Default address and port | Setting | Who should reach it |
+|---|---|---|---|
+| TLS edge (built-in) | All IPv4 and IPv6 addresses, `:443` | The installer's `--ingress bundled --site-hostname …` | Reviewers on your network |
+| HTTP redirect (built-in edge) | All addresses, `:80` | As above | Reviewers (redirects to https) |
+| Reviewer proxy | `127.0.0.1:8766` | `RTQA_WEB_LISTEN_HOST`, `RTQA_WEB_LISTEN_PORT` | The edge only, or your reverse proxy |
+| UI server | `127.0.0.1:8765` | `RTQA_WEB_UPSTREAM_HOST`, `RTQA_WEB_UPSTREAM_PORT` | The proxy only. It refuses to bind anything but loopback. |
+| Model server (assisted only) | `127.0.0.1:8080` | `RTQA_LLAMA_PORT` (managed server), `RTQA_ASSISTANT_ENDPOINT` (where requests go) | The UI server only |
+
+- **Expose only the edge.** Allow inbound 443 (and 80 if you want the redirect) and nothing else. The UI server is loopback-only and answers only requests carrying the proxy's secret, but it must never be published. Your acceptance test should confirm the internal port is unreachable from the network, including with forged identity headers.
+- **The UI server answers only the proxy.** On the host itself, a local process without the proxy's secret gets `401` (`403` if it sends identity headers). The one exception is `GET /healthz`, which answers `{"status": "ok"}` and nothing else. See [Access management](/security/rtqa-appliance/access-management#only-the-proxy-can-reach-the-ui-server).
+- **Binding the proxy beyond loopback** (`RTQA_WEB_LISTEN_HOST=0.0.0.0`) is possible, for example behind a reverse proxy on another host. The start-up check refuses a non-loopback listener with no sign-in at all. Behind a reverse proxy, set `RTQA_WEB_TRUSTED_PROXIES` to its address so its `X-Forwarded-For` and `X-Forwarded-Proto` headers are believed. The built-in edge sets `127.0.0.1`.
+- **The model server has no authentication of its own.** It listens on loopback, so any process on the host can reach it. Treat local accounts on the host as trusted.
+- **Unauthenticated endpoints.** `GET /healthz` (for load balancers) and `GET /status` are public. `/status` shows the version, the organization name, and status lines, never patient data. Reduce it with `RTQA_WEB_STATUS_PAGE=minimal` (running or setup required only) or `off` (404). The public surface also includes the sign-in and session endpoints, the sign-in configuration (`/api/auth-config`), the application's static files, and the Content Security Policy report endpoint.
+- **The setup wizard** has its own one-time setup token. The installer prints the setup link only to a terminal, never into a log. The built-in edge's access log removes the `token` query parameter and the `Referer` header.
+- **Changing ports.** On an appliance with a service account, root takes the proxy's port and address from the install record, so run the installer again with the new value. The preflight checks that every configured port is free or held by this install.
+- **No inbound connections from Aitrium.** The appliance polls; the control plane never connects in. There is no DICOM listener in this release.
+
+## Outbound proxy and custom CA
+
+| Setting | What it does |
+|---|---|
+| `RTQA_NETWORK_PROXY_URL`, or `RTQA_NETWORK_PROXY_URL_FILE` (mode 0600) for a URL with credentials | HTTP(S) proxy for every outbound call: control plane, sign-in exchange, signing keys, release manifest, REDCap, and model hosts. The file wins over the inline value. Credentials are never printed. Falls back to `HTTPS_PROXY` and `HTTP_PROXY`; unset everywhere means direct. |
+| `RTQA_NETWORK_NO_PROXY` | Hosts, domain suffixes, or CIDRs reached directly. `localhost`, `127.0.0.1`, `::1`, and an on-host model server are always direct. `NO_PROXY` from the environment is added. |
+| `RTQA_NETWORK_CA_BUNDLE_FILE` | A PEM file of extra CAs, for example a TLS-inspecting proxy's CA. **Added** to the default trust store, never replacing it. Falls back to `SSL_CERT_FILE` and `REQUESTS_CA_BUNDLE`. The file must contain certificates only. |
+| `RTQA_NETWORK_SFTP_VIA_PROXY` | `true` sends SFTP through the proxy with HTTP `CONNECT`. Default `false`. |
+
+Every outbound HTTP client is built in one place and reads the environment only through these settings, so explicit settings always win. The installer and `aitrium-rtqa update` honor the same settings for their own downloads, with one exception: the installer records an inline proxy URL only when it carries no credentials. For a proxy that needs a password, use `RTQA_NETWORK_PROXY_URL_FILE`, or updates run by root will not use it. Both fail closed: an unreadable or empty proxy file, a bad proxy URL, or a bad CA path stops the install or update with one line, never falling back to a direct connection. The wizard's **Network** step writes these settings, and its check explains failures in words (proxy refused, proxy wants a password, TLS not trusted, DNS).
+
+For a proxy that needs a password, put the URL with credentials in a root-owned file that nobody else can write (`root:aitrium-rtqa`, mode `0640`, serves both root and the services), and name it in `RTQA_NETWORK_PROXY_URL_FILE`. A proxy changed only in the wizard reaches the services but not root's updates; run the installer again with `--env-file` to record it.

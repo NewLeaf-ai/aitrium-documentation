@@ -1,0 +1,198 @@
+---
+title: "Troubleshooting"
+description: "Common Aitrium RTQA appliance install and run failures, what each message means, and how to fix it."
+---
+
+import { Audience } from '/snippets/audience.mdx';
+
+<Audience who="Trial organization IT · Hospital IT running the appliance" />
+
+Start with the appliance's own checks. They name what is wrong and the setting that controls it:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa preflight     # the host: OS, memory, disk, ports, storage, network, clock
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa validate      # the running configuration, the toolkit, and Aitrium connectivity
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa status        # runtime state, storage, cases
+curl -s https://<reviewer hostname>/status            # the start-up checks, in plain words
+```
+
+Paths assume the default work directory, `/opt/aitrium/rtqa`.
+
+## `root_refused`
+
+On an appliance with a service account, you may see:
+
+```json
+{"error": "root_refused", "status": "error", "detail": "'network' reads or writes the service user's data; run it as aitrium-rtqa (aitrium-rtqa does this for you, or sudo -u aitrium-rtqa ...). ..."}
+```
+
+**What it means.** You ran the lower-level `rtqa-appliance` command directly as root. The appliance's data belongs to the service account, `aitrium-rtqa`, and root does not read or write it. As root, `rtqa-appliance` only maintains the install record and the assistant's install ledger. Everything else refuses and exits with code 2. Running `rtqa-appliance host-preflight` as root refuses the same way.
+
+**Fix.** Run admin commands through the operator command, with `sudo`:
+
+```bash
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa network egress
+sudo /opt/aitrium/rtqa/bin/aitrium-rtqa preflight
+```
+
+`aitrium-rtqa` switches to the service account for anything that touches data, and stays root for service management, updates, and the assistant. If you really need the lower-level command, run it as the service account: `sudo -u aitrium-rtqa …`.
+
+The launchers (`rtqa-start-*`, `rtqa-load-env`) also refuse root. Use `aitrium-rtqa start` or `aitrium-rtqa service start` instead.
+
+## Preflight and install failures
+
+| Message (shortened) | Cause | Fix |
+|---|---|---|
+| `Linux aarch64 is not a supported platform` | The host is not Linux x86_64 or macOS | Install on Linux x86_64. |
+| `Python 3.x is too old` | Python older than 3.11 | Install Python 3.11 or newer as `python3`. |
+| `cannot create the appliance's virtual environment` | The `venv` module is missing | `sudo apt-get install python3-venv` |
+| `… CPU core(s); the appliance needs at least 2` | Too few vCPUs | Give the VM at least 2 vCPUs (4 recommended). |
+| `… of RAM; the review profile needs at least 8 GiB` | Too little memory | Give the machine at least 8 GiB (24 GiB for the assisted profile). |
+| `… free; at least 20 GiB is needed` | A data volume is too small | Free up space, or put that location on a larger volume. |
+| `port … is already in use by …` | Another program holds a port the appliance needs | Find it with `sudo ss -ltnp 'sport = :<port>'`, stop it, or move the appliance to another port. |
+| `… is on a network filesystem …; the review-state database needs local block storage` | The state directory is on NFS or SMB | Put it on a local disk (`--state-dir`). |
+| `… is not writable by …` | The installer cannot write a data location | Fix the folder's owner, or choose another location. |
+| `the host name does not resolve`, or a proxy or TLS error under **Outbound network** | No route to a download host or to Aitrium | Allow the destination, or set the proxy and CA. See [Data flows and network](/security/rtqa-appliance/data-flows). |
+| Clock more than 5 minutes off | The system clock is wrong | Turn on time synchronization (NTP). |
+| `No usable GPU found` (assisted) | No NVIDIA GPU, or the driver is missing | Install the driver until `nvidia-smi` lists the GPU, or install the review profile. |
+| `--env-file not found` | The file does not exist | Create it before you run the installer. |
+| `The --env-file … is not root's alone, so root does not read it` | The file, or a folder above it, is owned or writable by someone other than root | Keep it in `/root` or `/etc/aitrium`, owned by root and writable only by root. |
+| `--ingress bundled needs --site-hostname <fqdn>` | The built-in edge needs the reviewer hostname | Add `--site-hostname`, or use `--ingress external` or `none`. |
+| `--tls-cert and --tls-key must both point at existing files` | One file is missing or misspelled | Give both, with full paths. |
+| `The bundled edge runs as aitrium-rtqa and cannot read …` (warning) | The service account cannot read the certificate or key | `sudo chgrp aitrium-rtqa <key> && sudo chmod 640 <key>`. The edge does not start until it can. |
+| `The appliance's virtual environment … is not root's alone` | Someone other than root can write the virtual environment, so root will not run it | `sudo chown -R root:root <venv> && sudo chmod -R go-w <venv>`, or install with another `--venv`. |
+| `… something was planted in a directory root writes` | A file owned by another account is inside `bin/`, `systemd/`, or `ingress-config/` | Remove that file and run the installer again. |
+| `The services run as the unprivileged user aitrium-rtqa, which could not reach …` | A new install under a folder the service account cannot enter, such as `/root` | Install under `/opt/aitrium/rtqa`. Nothing was installed. |
+| `This existing install keeps running its services as root` (warning) | An existing install in a folder the service account cannot reach | Move it under `/opt/aitrium/rtqa` and run the installer again. |
+| `--service-user root is refused` | The services must not run as root | Leave the default, or give another unprivileged name. |
+
+On a new install, a blocking preflight problem stops the installer before it changes anything. `--skip-preflight` skips the check, and the install record shows that it was skipped. Do not use it to get past a real problem.
+
+## After install
+
+### The appliance shows setup mode
+
+`/healthz` answers `503 {"status":"setup_required"}`, `/` redirects to `/status`, and other paths answer `503 setup_required`. A start-up check has failed. Open `/status`: it lists each failed check, its fix, and the setting that controls it. The checks run again every 15 seconds. After a change to `.env`, restart the services.
+
+If the **organization** check fails, the usual cause is that the appliance cannot reach the Aitrium API over HTTPS. If the assignment itself is wrong, contact [Aitrium support](mailto:support@aitriumos.com).
+
+### `validate` says "Configuration is incomplete"
+
+A required deployment value is missing. Run `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa configure`, which prompts for each missing value, or finish the setup wizard.
+
+### The setup link does not open
+
+Without the built-in edge, the link points at `127.0.0.1:8766` on the appliance. Open an SSH tunnel from your workstation (`ssh -L 8766:127.0.0.1:8766 <you>@<appliance>`) and open the link there. To mint a new link, run `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa setup-url --new`.
+
+### "Permission denied" when editing `.env`
+
+The `.env` belongs to the service account. On Ubuntu, the kernel refuses even root an in-place edit of it. Edit it as the account:
+
+```bash
+sudo -u aitrium-rtqa nano /opt/aitrium/rtqa/.env
+```
+
+Plain `ls` does not show `.env`; use `ls -la`.
+
+### A changed data location is read-only to the services, or the appliance looks empty
+
+A data location changed only in the wizard or `.env` is not added to the hardened units' writable paths, and changing a location never moves the data already there. Follow [Changing data locations](/rtqa-appliance/operations#changing-data-locations): stop, back up, move the contents as the service account, run the installer again with the new option, check, and start.
+
+### Signed-in requests fail with `proxy_token_required`
+
+The UI server refused a request because the proxy's secret did not match its own. Each service reads the secret when it starts, so this happens when only one of them restarted after `aitrium-rtqa proxy-token rotate`. Restart both: `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa service restart`.
+
+### The worker stops taking new work
+
+The disk has reached the hard watermark (`RTQA_DATA_WATERMARK_HARD_PCT`, default 90%). Check with `aitrium-rtqa storage status`, then free space: see [Storage and retention](/rtqa-appliance/operations#storage-and-retention).
+
+## Delivery failures
+
+These codes appear on a case's ingestion status in the worklist and in the worker log.
+
+| Code | Meaning | Fix |
+|---|---|---|
+| `input_sftp_host_key_changed` | The SFTP delivery host presented a different SSH key from the one recorded or pinned. The delivery is refused and not retried. | Verify the new fingerprint with the delivery provider over a channel you trust. For a key recorded on first use, run `aitrium-rtqa sftp host-key accept`. For a pinned host, `accept` refuses: update `RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT` and restart the services. See [SFTP delivery host keys](/rtqa-appliance/operations#sftp-delivery-host-keys). |
+| `input_storage_lock_unavailable` | The storage location does not support file locks. Not retried. | Move the state directory to local block storage. NFS needs v4, or v3 with `lockd`, mounted without `nolock` or `local_lock`. SMB needs a Linux 5.5 or newer client. |
+| `input_delivery_busy` | Another import of the same delivery held its lock too long (`RTQA_INGEST_LOCK_TIMEOUT_S`, default 300 s). Temporary, and retried. | Usually nothing. If it repeats, check the worker log. |
+
+The appliance does not start at all if `RTQA_INGEST_SFTP_HOST_KEY_FINGERPRINT` is malformed (an empty entry, a bad host or port, an IPv6 address without brackets, or an invalid fingerprint). The message names the setting.
+
+If an SFTP delivery cannot connect, remember that SFTP does not go through the HTTP proxy unless `RTQA_NETWORK_SFTP_VIA_PROXY=true`. Otherwise the host needs a direct route to the delivery host's port.
+
+### "This case's imaging is being reclaimed"
+
+A reviewer sees *This case's imaging is being reclaimed under the retention policy; try again in a minute.* (`imaging_reclaim_in_progress`). A reclaim is deleting that case's received data at that moment. Wait a minute and try again.
+
+## Backups, restores, and updates
+
+| Message | Fix |
+|---|---|
+| `stop the UI server before running migrations` | Stop the services, then run the migration. |
+| `services_running` | An appliance service is still running. Stop them with `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa stop --all`, then restore. If the command itself cannot run, see [Stopping the appliance when its CLI is broken](#stopping-the-appliance-when-its-cli-is-broken). |
+| `persistence_locked` | Another appliance command held the database lock. Wait for it to finish, or stop it, and try again. |
+| `persistence_lock_unavailable` | The lock file cannot be used (a full disk, a permission problem, or a file system without file locks). Fix the cause the message names. Until then, commands that may write the database refuse. |
+| `snapshot_schema_newer` | The backup's database schema is newer than the installed release's. Restore it with a release that has that schema. |
+| `state_dir_not_local` | The state directory is on a network or FUSE file system. Move it to local storage. Nothing was changed. |
+| `staging_failed` | Preparing the replacement failed, for example on a full disk. The live database is unchanged; the message gives the safety copy's path. |
+| `database_in_use` | Something still has the live database open. Find and stop it, then retry. |
+| `database_unreadable_read_only` | A read-only `persistence status` or `doctor` could not open the database while the lock was unavailable. Free space or restore write access, and retry. |
+| `backup checksum mismatch`, `backup manifest missing` | The backup file or its `.manifest.json` is damaged or missing. Use another backup. |
+| `Not interactive: pass --yes to update without a prompt.` | `update` needs a typed confirmation. Run it on a terminal, or add `--yes` in automation. |
+| `A service could not be stopped (above); the update was not started.` | Fix what the message above names, then run `update` again. Nothing was installed. |
+| `… is installed; the services stay stopped until the pre-upgrade snapshot is restored` (exit 3) | Expected when you roll back across a schema change. Run the restore and `start --all` commands the installer printed. See [Rolling back an update](/rtqa-appliance/operations#rolling-back-an-update). |
+| `The installer failed. Services are stopped.` | Read the installer's error. Contact [Aitrium support](mailto:support@aitriumos.com) before you change database files. |
+| `… found a review-state database … but not the installed rtqa-appliance CLI to snapshot it with` | The update could not find the installed appliance to take its safety snapshot. It stopped before changing anything. Put the appliance's virtual environment back and run it again. |
+
+### Stopping the appliance when its CLI is broken
+
+`aitrium-rtqa stop --all` stops processes through the appliance's own command-line tool, which verifies each one. If that tool cannot run (for example a broken virtual environment or a half-finished install), stop the services by hand.
+
+**With systemd** (the units are installed):
+
+```bash
+sudo systemctl stop aitrium-rtqa-proxy aitrium-rtqa-ui aitrium-rtqa-worker aitrium-llama aitrium-rtqa-ingress
+systemctl is-active aitrium-rtqa-proxy aitrium-rtqa-ui aitrium-rtqa-worker aitrium-llama aitrium-rtqa-ingress
+```
+
+Every line must read `inactive`, or `unknown` for a unit this install does not have.
+
+**Without systemd (Linux),** identify each process before you signal it. These steps read `/proc`, so they work on Linux only. A PID file can name a process that is no longer the appliance's.
+
+1. List the candidates with their command line, working directory, and appliance directories:
+
+   ```bash
+   WORK=/opt/aitrium/rtqa   # this install's work directory
+   for pid in $(pgrep -f 'rtqa-appliance (ui serve|ui proxy|worker)|rtqa_appliance\.cli (ui serve|ui proxy|worker)|rtqa-start-(ui|proxy|worker)|llama-server'); do
+     echo "== $pid: $(sudo tr '\0' ' ' < /proc/$pid/cmdline)"
+     echo "   cwd: $(sudo readlink /proc/$pid/cwd)"
+     sudo cat "/proc/$pid/environ" | tr '\0' '\n' | grep -E '^RTQA_(WORK|STATE)_DIR=' | sed 's/^/   /'
+   done
+   ```
+
+2. Keep only this install's processes: the command is `rtqa-appliance ui serve`, `ui proxy`, or `worker` (or `python -m rtqa_appliance.cli …`), or `llama-server`, **and** its `RTQA_WORK_DIR` or `RTQA_STATE_DIR` names this install's work or state directory (compare after `readlink -f`), or, when the environment names neither, its working directory is the work directory. A `llama-server` whose `-m` model file is in this install's model directory is also this install's. Leave everything else alone.
+3. Signal each confirmed process, re-checking its command line just before, and confirm it exited:
+
+   ```bash
+   pid=<confirmed pid>
+   sudo tr '\0' ' ' < /proc/$pid/cmdline; echo      # still the same process?
+   sudo kill -TERM "$pid"
+   for i in $(seq 1 20); do sudo kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+   if sudo kill -0 "$pid" 2>/dev/null; then sudo kill -KILL "$pid"; sleep 1; fi
+   ps -p "$pid" -o pid=,stat=,args= || echo "exited"
+   ```
+
+Stop the proxy first, then the UI server, the worker, and the model server. Remove `logs/ui.pid`, `logs/proxy.pid`, `logs/worker-owner.json`, and `logs/llama-owner.json` only after every process is confirmed gone.
+
+## Assistant (assisted profile only)
+
+| Symptom | Check |
+|---|---|
+| The model server does not answer | `curl -sf http://127.0.0.1:8080/health`, then `aitrium-rtqa logs llama` |
+| The model server fails to start on an NVIDIA GPU | Load `nvidia-uvm` at boot (`nvidia-persistenced` or `nvidia-modprobe -u -c=0`). The hardened units stop the driver from loading it on first use. |
+| Activating a model in the app does not restart the model server | On polkit older than 0.106, restart it with `aitrium-rtqa service restart`. |
+| `assistant enable` stopped part-way | Run `sudo /opt/aitrium/rtqa/bin/aitrium-rtqa assistant recover`. |
+
+## Still stuck
+
+Collect the information listed in [Getting help from Aitrium](/rtqa-appliance/operations#getting-help-from-aitrium) and contact [support@aitriumos.com](mailto:support@aitriumos.com).
