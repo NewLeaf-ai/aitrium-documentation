@@ -11,7 +11,7 @@ import { Audience } from '/snippets/audience.mdx';
 
 Welcome to Aitrium. We developed AitriumOS to streamline trial participation for contributors by making it easier to standardize, validate, and upload data to investigators.
 
-This document is intended to guide first-time users of AitriumOS through the initial set-up and installation.
+This page guides first-time users through setup and installation. Updating from 2.2? See [What's new in AitriumOS 2.3](/aitrium-os/whats-new-2-3).
 
 ### The Two Parts of Aitrium
 
@@ -36,7 +36,7 @@ Most hospital networks restrict which applications can be installed and which ne
 <Note>
   **For IT staff — requirements for AitriumOS (clinical trial data submission application):**
 
-  - **Installation** — AitriumOS is a desktop application for Windows 10/11 (64-bit; 32-bit available for older releases) or macOS on Apple Silicon (M-series Macs). Intel Macs are not supported by current releases. The user needs it installed on their workstation.
+  - **Installation** — AitriumOS is a desktop application for Windows 10/11 (64-bit; 32-bit available for older releases) or macOS on Apple Silicon (M-series Macs). Intel Macs are not supported by current releases. The user needs it installed on their workstation. The first launch of AitriumOS 2.3 or later upgrades its local database on the workstation one-way, so an earlier version can't be reinstalled over it.
   - **Disk space** — during a submission, the application creates a temporary de-identified working copy of the patient imaging dataset, so the workstation needs transient free space roughly equal to the dataset being submitted. Working copies are deleted automatically when the submission completes or is cancelled (leftovers from interrupted sessions are removed the next time the application starts), so storage utilization does not accumulate over time.
   - **Web access** — outbound HTTPS (port 443) from the workstation to `app.aitriumos.com` and Aitrium service endpoints.
   - **Data upload** — for trials that transfer data over SFTP, outbound SFTP/SSH (TCP, usually port 22) from the workstation directly to the trial's SFTP server. This connection **cannot go through a web (HTTP) proxy**, so outbound firewall rules must permit it. Allow the **program** `NewLeaf.exe` (`C:\Program Files\AitriumOS\` for the MSI installer, `%LOCALAPPDATA%\AitriumOS\` for the standard installer), not just the port. The host and port are listed in AitriumOS under **Settings → Network → Upload destinations**.
@@ -73,15 +73,6 @@ To resolve it:
 
 ### Installing AitriumOS
 
-<div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
-  <iframe 
-    src="https://supercut.video/embed/aitrium/vMhNRfTBePqFIAStExvsyT?embed=full"
-    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowFullScreen
-  />
-</div>
-
 1. **Log in to Aitrium**: Access your account at [https://app.aitriumos.com](https://app.aitriumos.com) using your provided username and password.
 
 2. **Download the Application**: 
@@ -92,7 +83,7 @@ To resolve it:
    - For **Mac**: AitriumOS runs on Macs with Apple Silicon (M-series). To check, click the Apple icon → **About This Mac** and look for **Chip: Apple M…**. If your Mac has an Intel processor, contact [Aitrium support](mailto:support@aitriumos.com).
 
 <Warning>
-**Install only one Windows installer type.** The two types don't detect each other, so installing both puts two separate copies of AitriumOS on the computer — two identical icons that can run different versions, which is very confusing. If you're not sure whether AitriumOS is already installed, check **Windows Settings → Installed apps** first: if an AitriumOS entry is already there, update or uninstall that copy instead of installing a second one. The Downloads page will also warn you if you're about to download a different type than you used before.
+**Install only one Windows installer type.** Installing both puts two copies of AitriumOS on the computer, with the same icon, that can run different versions. If the MSI copy is already installed, the standard installer warns before it installs anything: "AitriumOS is already installed for everyone on this computer." Choose **No** and keep using that copy. If you're not sure what's installed, check **Windows Settings → Installed apps** first. The Downloads page also warns you if you're about to download a different type than you used before.
 </Warning>
 
 3. **Install the Application**: Follow your operating system's standard installation process.
@@ -106,21 +97,12 @@ If you want to move from one Windows installer type to the other — for example
    - An **MSI copy** was installed machine-wide, so removing it **requires administrator rights one last time** — if you don't have them, ask IT to uninstall it. After that, the Standard installer installs and updates without ever needing an administrator again.
    - A **Standard copy** uninstalls without administrator rights.
 3. **Install the new type**: return to the Downloads page and download the type you want. (The page will show a warning because your previous downloads were the other type — that warning exists to prevent *accidental* switches; when you're switching on purpose, continue.)
-4. **Your data is safe either way**: submitted trial data lives in Aitrium, not on the workstation, and your local sign-in and settings are kept through an uninstall/reinstall.
+4. **Your data is safe either way**: datasets that reached **Submission complete** and show as **Sent** on the trial page have been sent to the trial and recorded, so uninstalling doesn't affect them, and your local sign-in and settings are kept through an uninstall/reinstall.
 
 
 ### Using AitriumOS
 
-<div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", maxWidth: "100%", borderRadius: "8px" }}>
-  <iframe 
-    src="https://supercut.video/embed/aitrium/44Ne6pBxkRxHuSnYoQFoW7?embed=full"
-    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowFullScreen
-  />
-</div>
-
-After installation, launch AitriumOS and log in with your username and password. If you see a **"Can't reach Aitrium"** message instead of your trials, the workstation's network is blocking the connection — see [the section above](#how-you’ll-know-“can’t-reach-aitrium”).
+After installation, launch AitriumOS and sign in. The sign-in screen shows the version you're running. Then follow the guide for your trial: [EORTC data submission](/aitrium-os/no-protocol-submissions) or [RTQA data submission](/aitrium-os/protocol-submissions). If you see a **"Can't reach Aitrium"** message instead of your trials, the workstation's network is blocking the connection — see [the section above](#how-you’ll-know-“can’t-reach-aitrium”).
 
 ### App Updates
 When an update is available, the header shows a green **Update to** button with the new version. Select it, then **Update Now**: AitriumOS downloads the update, installs it and reopens. See [Updating AitriumOS](/aitrium-os/updating) for how to check your version and what to do if an update needs administrator rights.
